@@ -201,7 +201,7 @@ export async function getAllSellers(): Promise<Seller[]> {
   const keys = await redis.keys('seller:seller_*');
   if (!keys.length) return [];
 
-  const sellers = await redis.mget<Seller[]>(...keys);
+  const sellers = await redis.mget<Seller>(...keys);
   return sellers.filter((s): s is Seller => s !== null);
 }
 
