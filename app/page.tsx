@@ -1,33 +1,353 @@
 import Link from 'next/link';
-import { SubdomainForm } from './subdomain-form';
-import { rootDomain } from '@/lib/utils';
+import { auth } from '@/auth';
+import { getAllSellers } from '@/lib/db';
+import { rootDomain, protocol } from '@/lib/utils';
+import { 
+  ShoppingBag, Search, User, ShoppingCart, ChevronRight, 
+  Store, TrendingUp, Shield, Truck, Star, ArrowRight,
+  Laptop, Shirt, Home as HomeIcon, Sparkles, Gift
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default async function HomePage() {
+  const session = await auth();
+  const sellers = await getAllSellers();
+  const approvedSellers = sellers.filter(s => s.status === 'approved');
+
+  const categories = [
+    { name: 'Electronics', icon: Laptop, color: 'from-blue-500 to-cyan-500' },
+    { name: 'Fashion', icon: Shirt, color: 'from-pink-500 to-rose-500' },
+    { name: 'Home & Garden', icon: HomeIcon, color: 'from-green-500 to-emerald-500' },
+    { name: 'Beauty', icon: Sparkles, color: 'from-purple-500 to-violet-500' },
+    { name: 'Gifts', icon: Gift, color: 'from-amber-500 to-orange-500' },
+  ];
+
+  const features = [
+    { icon: Truck, title: 'Fast Delivery', description: 'Quick shipping worldwide' },
+    { icon: Shield, title: 'Secure Shopping', description: 'Protected transactions' },
+    { icon: Star, title: 'Quality Products', description: 'Verified sellers only' },
+    { icon: TrendingUp, title: 'Best Prices', description: 'Competitive pricing' },
+  ];
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4 relative">
-      <div className="absolute top-4 right-4">
-        <Link
-          href="/admin"
-          className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          Admin
-        </Link>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between py-2 text-sm border-b">
+            <div className="flex items-center gap-6 text-gray-600">
+              <Link href="/auth/seller-register" className="hover:text-orange-600 flex items-center gap-1">
+                <Store className="w-4 h-4" />
+                Sell on MarketPlace
+              </Link>
+              <span className="hidden md:inline">Download App</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {session?.user ? (
+                <div className="flex items-center gap-4">
+                  <span className="text-gray-600">Hi, {session.user.name?.split(' ')[0] || 'User'}</span>
+                  {session.user.role === 'SELLER' && (
+                    <Link href="/seller" className="text-orange-600 hover:underline font-medium">
+                      Seller Dashboard
+                    </Link>
+                  )}
+                  <Link href="/api/auth/signout" className="text-gray-600 hover:text-orange-600">
+                    Sign Out
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <Link href="/auth/login" className="text-gray-600 hover:text-orange-600">
+                    Sign In
+                  </Link>
+                  <Link href="/auth/register" className="text-orange-600 font-medium hover:underline">
+                    Register
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Main Header */}
+          <div className="flex items-center justify-between py-4 gap-8">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
+                <ShoppingBag className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent hidden sm:block">
+                MarketPlace
+              </span>
+            </Link>
 
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-            {rootDomain}
-          </h1>
-          <p className="mt-3 text-lg text-gray-600">
-            Create your own subdomain with a custom emoji
+            {/* Search Bar */}
+            <div className="flex-1 max-w-2xl">
+              <div className="relative flex">
+                <input
+                  type="text"
+                  placeholder="Search for products, brands and more..."
+                  className="w-full px-4 py-3 pl-12 border-2 border-gray-200 rounded-l-lg focus:outline-none focus:border-orange-500 text-sm"
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Button className="rounded-l-none bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-6">
+                  Search
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Icons */}
+            <div className="flex items-center gap-4">
+              <Link href={session ? '/account' : '/auth/login'} className="flex flex-col items-center text-gray-600 hover:text-orange-600">
+                <User className="w-6 h-6" />
+                <span className="text-xs mt-1 hidden md:block">Account</span>
+              </Link>
+              <Link href="/cart" className="flex flex-col items-center text-gray-600 hover:text-orange-600 relative">
+                <ShoppingCart className="w-6 h-6" />
+                <span className="text-xs mt-1 hidden md:block">Cart</span>
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">
+                  0
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Categories Nav */}
+          <nav className="flex items-center gap-8 py-3 overflow-x-auto">
+            {categories.map((cat) => (
+              <Link 
+                key={cat.name} 
+                href={`/category/${cat.name.toLowerCase().replace(/ & /g, '-')}`}
+                className="flex items-center gap-2 text-gray-600 hover:text-orange-600 whitespace-nowrap text-sm font-medium"
+              >
+                <cat.icon className="w-4 h-4" />
+                {cat.name}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
+        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24 relative">
+          <div className="max-w-2xl">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+              Discover Amazing Products from Trusted Sellers
+            </h1>
+            <p className="text-lg text-orange-100 mb-8">
+              Shop from thousands of verified sellers and manufacturers. Quality products, competitive prices, fast delivery.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link href="/auth/register">
+                <Button size="lg" className="bg-white text-orange-600 hover:bg-orange-50 font-semibold shadow-lg">
+                  Start Shopping
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+              <Link href="/auth/seller-register">
+                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 font-semibold">
+                  Become a Seller
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Bar */}
+      <section className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                  <feature.icon className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">{feature.title}</h3>
+                  <p className="text-xs text-gray-500">{feature.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Categories Section */}
+      <section className="max-w-7xl mx-auto px-4 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">Shop by Category</h2>
+          <Link href="/categories" className="text-orange-600 hover:underline text-sm font-medium flex items-center gap-1">
+            View All <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {categories.map((cat) => (
+            <Link 
+              key={cat.name}
+              href={`/category/${cat.name.toLowerCase().replace(/ & /g, '-')}`}
+              className="group"
+            >
+              <div className={`bg-gradient-to-br ${cat.color} rounded-2xl p-6 text-center transition-transform group-hover:scale-105`}>
+                <cat.icon className="w-10 h-10 text-white mx-auto mb-3" />
+                <h3 className="font-semibold text-white">{cat.name}</h3>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Featured Sellers */}
+      <section className="bg-white py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Featured Stores</h2>
+              <p className="text-gray-600 mt-1">Discover our top-rated sellers and manufacturers</p>
+            </div>
+            <Link href="/stores" className="text-orange-600 hover:underline text-sm font-medium flex items-center gap-1">
+              View All Stores <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+          
+          {approvedSellers.length === 0 ? (
+            <div className="bg-gray-50 rounded-2xl p-12 text-center">
+              <Store className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No stores yet</h3>
+              <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                Be the first to open a store on our marketplace. Start selling to millions of customers today.
+              </p>
+              <Link href="/auth/seller-register">
+                <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600">
+                  Open Your Store
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {approvedSellers.slice(0, 8).map((seller) => (
+                <Link 
+                  key={seller.id}
+                  href={`${protocol}://${seller.subdomain}.${rootDomain}`}
+                  className="group"
+                >
+                  <div className="bg-gray-50 rounded-2xl p-6 transition-all group-hover:shadow-lg group-hover:bg-white border border-transparent group-hover:border-orange-100">
+                    <div className="flex items-center gap-4 mb-4">
+                      {seller.logo ? (
+                        <img src={seller.logo} alt={seller.businessName} className="w-14 h-14 rounded-xl object-cover" />
+                      ) : (
+                        <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center">
+                          <Store className="w-7 h-7 text-white" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate group-hover:text-orange-600">
+                          {seller.businessName}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          {seller.verified && (
+                            <span className="flex items-center gap-1 text-green-600">
+                              <Shield className="w-3 h-3" />
+                              Verified
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {seller.description && (
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                        {seller.description}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">{seller.subdomain}.{rootDomain}</span>
+                      <span className="text-orange-600 font-medium group-hover:underline">
+                        Visit Store →
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-gradient-to-r from-gray-900 to-gray-800 py-16">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Ready to Start Selling?
+          </h2>
+          <p className="text-gray-400 mb-8 max-w-2xl mx-auto">
+            Join thousands of successful sellers on MarketPlace. Set up your store in minutes and reach millions of customers worldwide.
           </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link href="/auth/seller-register">
+              <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 font-semibold">
+                <Store className="w-5 h-5 mr-2" />
+                Open Your Store
+              </Button>
+            </Link>
+            <Link href="/how-it-works">
+              <Button size="lg" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                Learn More
+              </Button>
+            </Link>
+          </div>
         </div>
+      </section>
 
-        <div className="mt-8 bg-white shadow-md rounded-lg p-6">
-          <SubdomainForm />
+      {/* Footer */}
+      <footer className="bg-white border-t">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
+                  <ShoppingBag className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-bold text-gray-900">MarketPlace</span>
+              </div>
+              <p className="text-sm text-gray-500">
+                Your trusted marketplace for quality products from verified sellers worldwide.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Shop</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li><Link href="/categories" className="hover:text-orange-600">Categories</Link></li>
+                <li><Link href="/stores" className="hover:text-orange-600">All Stores</Link></li>
+                <li><Link href="/deals" className="hover:text-orange-600">Deals</Link></li>
+                <li><Link href="/new" className="hover:text-orange-600">New Arrivals</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Sell</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li><Link href="/auth/seller-register" className="hover:text-orange-600">Become a Seller</Link></li>
+                <li><Link href="/seller/how-it-works" className="hover:text-orange-600">How It Works</Link></li>
+                <li><Link href="/seller/pricing" className="hover:text-orange-600">Pricing</Link></li>
+                <li><Link href="/seller/success-stories" className="hover:text-orange-600">Success Stories</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Support</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li><Link href="/help" className="hover:text-orange-600">Help Center</Link></li>
+                <li><Link href="/contact" className="hover:text-orange-600">Contact Us</Link></li>
+                <li><Link href="/privacy" className="hover:text-orange-600">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-orange-600">Terms of Service</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t mt-8 pt-8 text-center text-sm text-gray-500">
+            © 2026 MarketPlace. All rights reserved.
+          </div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
