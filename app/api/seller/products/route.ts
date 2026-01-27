@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         },
         videos: true,
       },
-      orderBy: { scrapedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     // Transform to simpler format for frontend
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       category: p.categoryId,
       status: p.status.toLowerCase(),
       images: p.images.map((img: typeof p.images[number]) => ({ url: img.url, position: img.position })),
-      createdAt: p.scrapedAt.toISOString(),
+      createdAt: p.createdAt.toISOString(),
     }));
 
     return NextResponse.json({ products: formattedProducts });
@@ -157,6 +157,7 @@ export async function POST(request: NextRequest) {
         leadTime: leadTime ? `${leadTime} days` : null,
         status: 'ACTIVE',
         inStock: quantity > 0,
+        source: 'seller-portal', // Distinguish from scraped products
         images: {
           create: images?.map((img: { url: string; publicId?: string; position: number }) => ({
             url: img.url,

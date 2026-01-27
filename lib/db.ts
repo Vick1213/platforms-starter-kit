@@ -422,8 +422,23 @@ export async function updateSeller(id: string, data: Partial<AppSeller>): Promis
 
   const appSeller: AppSeller = { ...seller };
 
-  // Invalidate and update cache
+  // Invalidate and update all related caches
   await redis.set(cacheKeys.seller(id), appSeller, { ex: CACHE_TTL.SELLER });
+  
+  // Also update/invalidate user lookup cache
+  if (seller.userId) {
+    await redis.set(cacheKeys.sellerByUser(seller.userId), id, { ex: CACHE_TTL.SELLER });
+  }
+  
+  // Invalidate subdomain cache to force refresh with new data
+  if (seller.subdomain) {
+    await redis.del(cacheKeys.sellerBySubdomain(seller.subdomain));
+  }
+  
+  // Invalidate custom domain cache if exists
+  if (seller.customDomain) {
+    await redis.del(cacheKeys.sellerByDomain(seller.customDomain));
+  }
   
   return appSeller;
 }
@@ -547,6 +562,100 @@ export async function invalidateSellerCache(sellerId: string): Promise<void> {
     if (seller.customDomain) {
       await redis.del(cacheKeys.sellerByDomain(seller.customDomain));
     }
+  }
+}
+
+// ============================================
+// PRODUCT FUNCTIONS
+// ============================================
+
+export async function getProductsBySellerId(sellerId: string) {
+  try {
+    // First find the company for this seller
+    const company = await prisma.company.findUnique({
+      where: { sellerId },
+    });
+
+    if (!company) {
+      return [];
+    }
+
+    // Then get all products for this company
+    const products = await prisma.product.findMany({
+      where: { companyId: company.id },
+      include: {
+        company: {
+          select: {
+            name: true,
+            slug: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return products;
+  } catch (error) {
+    console.error('Error fetching products by seller:', error);
+    return [];
+  }
+}
+
+export async function getProductCountBySellerId(sellerId: string): Promise<number> {
+  try {
+    // First find the company for this seller
+    const company = await prisma.company.findUnique({
+      where: { sellerId },
+    });
+
+    if (!company) {
+      return 0;
+    }
+
+    // Count products for this company
+    const count = await prisma.product.count({
+      where: { companyId: company.id },
+    });
+
+    return count;
+  } catch (error) {
+    console.error('Error counting products by seller:', error);
+    return 0;
+  }
+}
+
+export async function getActiveProductsBySellerId(sellerId: string) {
+  try {
+    // First find the company for this seller
+    const company = await prisma.company.findUnique({
+      where: { sellerId },
+    });
+
+    if (!company) {
+      return [];
+    }
+
+    // Get only active/published products
+    const products = await prisma.product.findMany({
+      where: { 
+        companyId: company.id,
+        status: 'ACTIVE',
+      },
+      include: {
+        company: {
+          select: {
+            name: true,
+            slug: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return products;
+  } catch (error) {
+    console.error('Error fetching active products by seller:', error);
+    return [];
   }
 }
 

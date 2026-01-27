@@ -377,8 +377,9 @@ model Product {
   // Metadata
   source            String?
   sourceUrl         String?
-  scrapedAt         DateTime @default(now())
+  createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  scrapedAt         DateTime?
   publishedAt       DateTime?
   
   @@unique([companyId, slug])

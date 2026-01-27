@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getSellerBySubdomain } from '@/lib/db';
+import { getSellerBySubdomain, getActiveProductsBySellerId } from '@/lib/db';
 import { protocol, rootDomain, getMainSiteUrl, getSellerPortalUrl } from '@/lib/utils';
 import { ShoppingBag, Star, Shield, Truck, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -96,6 +96,9 @@ export default async function StorePage({
       </div>
     );
   }
+
+  // Fetch products for the approved seller
+  const products = await getActiveProductsBySellerId(seller.id);
 
   return (
     <SessionProvider>
@@ -253,12 +256,60 @@ export default async function StorePage({
             </Link>
           </div>
           
-          {/* Empty State */}
-          <div className="bg-white rounded-xl p-12 text-center border">
-            <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No products yet</h3>
-            <p className="text-gray-500 mb-6">This store is setting up their inventory. Check back soon!</p>
-          </div>
+          {products.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {products.map((product: any) => (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.slug}`}
+                  className="bg-white rounded-xl overflow-hidden shadow-sm border hover:shadow-md transition-shadow group"
+                >
+                  <div className="aspect-square relative bg-gray-100">
+                    {product.images && product.images.length > 0 ? (
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ShoppingBag className="w-12 h-12 text-gray-300" />
+                      </div>
+                    )}
+                    {product.status === 'active' && (
+                      <span className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                        In Stock
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-900 mb-1 truncate group-hover:text-orange-600">
+                      {product.name}
+                    </h3>
+                    <p className="text-orange-600 font-bold">
+                      {product.minPrice === product.maxPrice 
+                        ? `$${product.minPrice.toFixed(2)}`
+                        : `$${product.minPrice.toFixed(2)} - $${product.maxPrice.toFixed(2)}`
+                      }
+                    </p>
+                    {product.moq && product.moq > 1 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        MOQ: {product.moq} units
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            /* Empty State */
+            <div className="bg-white rounded-xl p-12 text-center border">
+              <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No products yet</h3>
+              <p className="text-gray-500 mb-6">This store is setting up their inventory. Check back soon!</p>
+            </div>
+          )}
         </section>
       </main>
 

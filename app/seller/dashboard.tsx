@@ -24,9 +24,12 @@ type SellerDashboardProps = {
     image: string | null;
     role: UserRole;
   };
+  productCount?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  products?: any[];
 };
 
-export function SellerDashboard({ seller, user }: SellerDashboardProps) {
+export function SellerDashboard({ seller, user, productCount = 0, products = [] }: SellerDashboardProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSignOutOptions, setShowSignOutOptions] = useState(false);
@@ -45,7 +48,7 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
 
   const stats = [
     { label: 'Total Sales', value: `$${seller.totalSales.toLocaleString()}`, icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Products', value: '0', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Products', value: productCount.toString(), icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Orders', value: '0', icon: ShoppingCart, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Customers', value: '0', icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
@@ -279,22 +282,30 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
                 <CardDescription>Common tasks to manage your store</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
-                <Button className="h-auto py-4 flex flex-col items-center gap-2 bg-gradient-to-br from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600">
-                  <Plus className="w-5 h-5" />
-                  <span>Add Product</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
-                  <span>View Orders</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-                  <Store className="w-5 h-5" />
-                  <span>Customize Store</span>
-                </Button>
-                <Button variant="outline" className="h-auto py-4 flex flex-col items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  <span>View Analytics</span>
-                </Button>
+                <Link href="/seller/products/new">
+                  <Button className="w-full h-auto py-4 flex flex-col items-center gap-2 bg-gradient-to-br from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600">
+                    <Plus className="w-5 h-5" />
+                    <span>Add Product</span>
+                  </Button>
+                </Link>
+                <Link href="/seller/orders">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2">
+                    <ShoppingCart className="w-5 h-5" />
+                    <span>View Orders</span>
+                  </Button>
+                </Link>
+                <Link href="/seller/settings">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2">
+                    <Store className="w-5 h-5" />
+                    <span>Customize Store</span>
+                  </Button>
+                </Link>
+                <Link href="/seller/analytics">
+                  <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    <span>View Analytics</span>
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 

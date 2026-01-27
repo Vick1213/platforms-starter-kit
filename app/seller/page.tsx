@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { getSellerByUserId } from '@/lib/db';
+import { getSellerByUserId, getProductCountBySellerId, getProductsBySellerId } from '@/lib/db';
 import { UserRole } from '@/lib/auth-config';
 import { SellerDashboard } from './dashboard';
 
@@ -23,5 +23,9 @@ export default async function SellerPage() {
     redirect('/seller/become');
   }
 
-  return <SellerDashboard seller={seller} user={session.user} />;
+  // Get product count for the seller
+  const productCount = await getProductCountBySellerId(seller.id);
+  const products = await getProductsBySellerId(seller.id);
+
+  return <SellerDashboard seller={seller} user={session.user} productCount={productCount} products={products} />;
 }
