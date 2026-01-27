@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, getUserByEmail } from '@/lib/db';
 import { UserRole, ADMIN_SUBDOMAIN } from '@/lib/auth-config';
-import { rootDomain, protocol } from '@/lib/utils';
+import { buildSubdomainUrl } from '@/lib/utils';
 
 // This endpoint creates an admin user - should be secured in production
 // Access it once to create your admin account, then disable or protect it
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       if (existingUser.role === UserRole.ADMIN) {
         return NextResponse.json({
           message: 'Admin user already exists',
-          adminUrl: `${protocol}://${ADMIN_SUBDOMAIN}.${rootDomain}`,
+          adminUrl: buildSubdomainUrl(ADMIN_SUBDOMAIN),
         });
       }
       return NextResponse.json(
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
       adminSubdomain: ADMIN_SUBDOMAIN,
-      adminUrl: `${protocol}://${ADMIN_SUBDOMAIN}.${rootDomain}`,
+      adminUrl: buildSubdomainUrl(ADMIN_SUBDOMAIN),
     });
   } catch (error) {
     console.error('Admin setup error:', error);
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     adminSubdomain: ADMIN_SUBDOMAIN,
-    adminUrl: `${protocol}://${ADMIN_SUBDOMAIN}.${rootDomain}`,
+    adminUrl: buildSubdomainUrl(ADMIN_SUBDOMAIN),
     message: 'Use POST with x-admin-setup-key header to create admin user',
   });
 }

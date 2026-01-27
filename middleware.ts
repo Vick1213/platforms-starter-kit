@@ -31,31 +31,32 @@ function extractSubdomain(request: NextRequest): string | null {
     return null;
   }
 
-  // Vercel deployment URLs
-  // Format: subdomain.project-name.vercel.app
-  if (hostname.endsWith('.vercel.app')) {
-    const parts = hostname.split('.');
-    console.log('[Middleware] Vercel parts:', parts, 'length:', parts.length);
-    
-    // parts for main domain = ['platforms-starter-kit-xi-rouge', 'vercel', 'app'] = 3 parts
-    // parts for subdomain = ['admin-fe7b9bce29ac', 'platforms-starter-kit-xi-rouge', 'vercel', 'app'] = 4 parts
-    
-    // Handle preview deployment URLs (tenant---branch-name.vercel.app)
+  // ============================================
+  // VERCEL PREVIEW URL PREFIX SYNTAX
+  // ============================================
+  // Vercel does NOT support wildcard subdomains on *.vercel.app
+  // Instead, use the "---" prefix syntax:
+  //   {tenant}---{preview-url}
+  // 
+  // Example:
+  //   admin-fe7b9bce29ac---platforms-starter-kit-xi-rouge.vercel.app
+  //   laptops---platforms-starter-kit-xi-rouge.vercel.app
+  //
+  // This routes to the same deployment but passes the full hostname
+  // to our code, allowing us to extract the tenant prefix.
+  // ============================================
+  
+  if (hostname.includes('.vercel.app') || hostname.includes('.vercel.dev')) {
+    // Check for "---" prefix syntax (Vercel's multi-tenant preview URL pattern)
     if (hostname.includes('---')) {
-      const firstPart = parts[0];
+      const firstPart = hostname.split('.')[0];
       const tenantParts = firstPart.split('---');
-      return tenantParts.length > 1 ? tenantParts[0] : null;
+      console.log('[Middleware] Vercel --- prefix detected:', tenantParts);
+      return tenantParts.length > 0 ? tenantParts[0] : null;
     }
     
-    // Regular Vercel deployment: subdomain.project-name.vercel.app
-    // Main domain has 3 parts, subdomain adds 1 more = 4 parts
-    if (parts.length >= 4) {
-      const subdomain = parts[0];
-      console.log('[Middleware] Extracted subdomain:', subdomain);
-      return subdomain;
-    }
-    
-    // No subdomain (just project-name.vercel.app = 3 parts)
+    // No prefix = main domain, no subdomain
+    console.log('[Middleware] No --- prefix found, this is the main domain');
     return null;
   }
 

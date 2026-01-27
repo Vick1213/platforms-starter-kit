@@ -10,7 +10,7 @@ import {
   LogOut, Store, Plus, BarChart3, ShoppingCart, Clock, CheckCircle2,
   AlertCircle, ExternalLink, Menu, X
 } from 'lucide-react';
-import { protocol, rootDomain } from '@/lib/utils';
+import { buildSubdomainUrl, rootDomain, isVercelPreview } from '@/lib/utils';
 import type { Seller } from '@/lib/types';
 import type { UserRole } from '@/lib/auth-config';
 
@@ -35,7 +35,11 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
     { label: 'Customers', value: '0', icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
-  const storeUrl = `${protocol}://${seller.subdomain}.${rootDomain}`;
+  const storeUrl = buildSubdomainUrl(seller.subdomain);
+  // Display format for UI - use --- for Vercel preview, . for custom domains
+  const displayDomain = isVercelPreview 
+    ? `${seller.subdomain}---${rootDomain}` 
+    : `${seller.subdomain}.${rootDomain}`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -197,7 +201,7 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
                   <p className="text-sm text-green-700">
                     Your store is live at{' '}
                     <a href={storeUrl} target="_blank" className="underline font-medium">
-                      {seller.subdomain}.{rootDomain}
+                      {displayDomain}
                     </a>
                   </p>
                 </div>
@@ -280,7 +284,7 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-gray-600">Store URL</span>
                   <a href={storeUrl} target="_blank" className="font-medium text-orange-600 hover:underline">
-                    {seller.subdomain}.{rootDomain}
+                    {displayDomain}
                   </a>
                 </div>
                 {seller.customDomain && (

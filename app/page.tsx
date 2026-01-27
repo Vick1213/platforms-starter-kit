@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { getAllSellers } from '@/lib/db';
-import { rootDomain, protocol } from '@/lib/utils';
+import { rootDomain, buildSubdomainUrl, isVercelPreview } from '@/lib/utils';
 import { 
   ShoppingBag, Search, User, ShoppingCart, ChevronRight, 
   Store, TrendingUp, Shield, Truck, Star, ArrowRight,
@@ -230,7 +230,7 @@ export default async function HomePage() {
               {approvedSellers.slice(0, 8).map((seller) => (
                 <Link 
                   key={seller.id}
-                  href={`${protocol}://${seller.subdomain}.${rootDomain}`}
+                  href={buildSubdomainUrl(seller.subdomain)}
                   className="group"
                 >
                   <div className="bg-gray-50 rounded-2xl p-6 transition-all group-hover:shadow-lg group-hover:bg-white border border-transparent group-hover:border-orange-100">
@@ -262,7 +262,9 @@ export default async function HomePage() {
                       </p>
                     )}
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">{seller.subdomain}.{rootDomain}</span>
+                      <span className="text-gray-500">
+                        {isVercelPreview ? `${seller.subdomain}---${rootDomain}` : `${seller.subdomain}.${rootDomain}`}
+                      </span>
                       <span className="text-orange-600 font-medium group-hover:underline">
                         Visit Store →
                       </span>
