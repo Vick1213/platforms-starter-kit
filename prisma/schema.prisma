@@ -1,5 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Supply Me - B2B Marketplace Schema (Alibaba/IndiaMART style)
+// Prisma schema for PostgreSQL
 
 generator client {
   provider = "prisma-client-js"
@@ -11,173 +11,702 @@ datasource db {
 }
 
 // ============================================
-// SCRAPED DATA MODELS (populated by external scraper)
+// ENUMS
 // ============================================
 
-// Companies scraped from external sources
+enum BusinessType {
+  MANUFACTURER
+  TRADING_COMPANY
+  WHOLESALER
+  DISTRIBUTOR
+  AGENT
+  RETAILER
+  BUYING_OFFICE
+  OTHER
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  GOLD_SUPPLIER
+  TRUSTED_SUPPLIER
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+  PENDING_REVIEW
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  NEGOTIATING
+  QUOTED
+  WON
+  LOST
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  LETTER_OF_CREDIT
+  TELEGRAPHIC_TRANSFER
+  PAYPAL
+  WESTERN_UNION
+  MONEY_GRAM
+  ESCROW
+  TRADE_ASSURANCE
+}
+
+// ============================================
+// SUPPLIER / COMPANY
+// ============================================
+
 model Company {
-  id          String   @id @default(cuid())
-  name        String
-  domain      String?  @unique // Website domain for linking with sellers
-  description String?
-  logo        String?
-  website     String?
-  industry    String?
-  country     String?
-  city        String?
-  address     String?
-  phone       String?
-  email       String?
+  id                  String   @id @default(cuid())
   
-  // Linking to registered sellers (if domain/name matches)
-  sellerId    String?  @unique
-  seller      Seller?  @relation(fields: [sellerId], references: [id])
+  // Basic Info
+  name                String
+  slug                String   @unique
+  description         String?  @db.Text
+  shortDescription    String?
+  logo                String?
+  banner              String?
   
-  // Products from this company
-  products    Product[]
+  // Business Details
+  businessType        BusinessType @default(MANUFACTURER)
+  yearEstablished     Int?
+  employeeCount       String?
+  annualRevenue       String?
+  registrationNumber  String?
+  legalOwner          String?
   
-  // Locations/branches of this company
-  locations   Location[]
+  // Contact
+  website             String?
+  email               String?
+  phone               String?
+  whatsapp            String?
+  wechat              String?
+  skype               String?
+  
+  // Location (HQ)
+  address             String?
+  city                String?
+  state               String?
+  country             String?
+  postalCode          String?
+  latitude            Float?
+  longitude           Float?
+  
+  // Factory Info
+  factoryAddress      String?
+  factorySize         String?
+  productionLines     Int?
+  rndStaff            Int?
+  qcStaff             Int?
+  
+  // Verification
+  verificationStatus  VerificationStatus @default(UNVERIFIED)
+  verifiedAt          DateTime?
+  memberSince         DateTime?
+  responseRate        Float?
+  responseTime        String?
+  onTimeDeliveryRate  Float?
+  
+  // Ratings
+  overallRating       Float        @default(0)
+  totalReviews        Int          @default(0)
+  totalTransactions   Int          @default(0)
+  
+  // Export Markets
+  mainMarkets         String[]
+  exportPercentage    Float?
+  
+  // Trade Capacity
+  tradeAssurance      Boolean      @default(false)
+  tradeAssuranceLimit Float?
+  acceptedPayments    PaymentMethod[]
+  nearestPort         String?
+  
+  // Linking
+  domain              String?      @unique
+  sellerId            String?      @unique
+  seller              Seller?      @relation(fields: [sellerId], references: [id])
+  
+  // Relations
+  products            Product[]
+  locations           Location[]
+  certifications      CompanyCertification[]
+  videos              CompanyVideo[]
+  reviews             SupplierReview[]
+  inquiries           Inquiry[]
   
   // Metadata
-  source      String?  // Where the data was scraped from
-  scrapedAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  verified    Boolean  @default(false)
+  source              String?
+  sourceUrl           String?
+  scrapedAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  isActive            Boolean      @default(true)
+  viewCount           Int          @default(0)
   
   @@index([name])
-  @@index([domain])
-  @@index([industry])
+  @@index([slug])
   @@index([country])
+  @@index([businessType])
+  @@index([verificationStatus])
+  @@index([overallRating])
 }
 
-// Products scraped from external sources
+// Company Certifications (ISO, CE, FDA, etc.)
+model CompanyCertification {
+  id              String   @id @default(cuid())
+  
+  name            String
+  type            String?
+  issuedBy        String?
+  certificateNo   String?
+  validFrom       DateTime?
+  validUntil      DateTime?
+  documentUrl     String?
+  verified        Boolean  @default(false)
+  
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([companyId])
+  @@index([name])
+}
+
+// Company Videos (factory tours, product demos)
+model CompanyVideo {
+  id              String   @id @default(cuid())
+  
+  title           String
+  type            String?
+  url             String
+  thumbnail       String?
+  duration        Int?
+  
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([companyId])
+}
+
+// ============================================
+// PRODUCTS
+// ============================================
+
 model Product {
-  id            String   @id @default(cuid())
-  name          String
-  description   String?
-  price         Float?
-  currency      String   @default("USD")
-  category      String?
-  subcategory   String?
-  brand         String?
-  sku           String?
-  barcode       String?
+  id                String   @id @default(cuid())
   
-  // Images
-  images        String[] // Array of image URLs
-  thumbnail     String?
+  // Basic Info
+  name              String
+  slug              String
+  description       String?  @db.Text
+  shortDescription  String?
   
-  // Product details
-  specifications Json?    // Flexible JSON for product specs
-  features      String[]
-  tags          String[]
+  // Media
+  images            ProductImage[]
+  videos            ProductVideo[]
+  thumbnail         String?
   
-  // Availability
-  inStock       Boolean  @default(true)
-  stockQuantity Int?
+  // Categorization
+  categoryId        String?
+  category          Category? @relation(fields: [categoryId], references: [id])
+  tags              String[]
+  keywords          String[]
   
-  // Company relationship
-  companyId     String
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // Brand
+  brand             String?
+  modelNumber       String?
   
-  // Location where product is available
-  locationId    String?
-  location      Location? @relation(fields: [locationId], references: [id])
+  // Pricing
+  minPrice          Float?
+  maxPrice          Float?
+  currency          String   @default("USD")
+  priceUnit         String?
+  pricingTiers      PricingTier[]
   
-  // Metadata
-  source        String?  // Where the data was scraped from
-  sourceUrl     String?  // Original product page URL
-  scrapedAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // MOQ & Supply
+  moq               Int?
+  moqUnit           String?
+  supplyCapacity    String?
+  leadTime          String?
   
-  @@index([name])
-  @@index([category])
-  @@index([brand])
-  @@index([companyId])
-  @@index([price])
-}
-
-// Locations/branches of companies
-model Location {
-  id          String   @id @default(cuid())
-  name        String?  // Branch name
-  type        String?  // headquarters, branch, warehouse, store
+  // Shipping
+  fobPort           String?
+  fobPrice          Float?
+  cifPrice          Float?
+  shippingWeight    Float?
+  shippingVolume    Float?
+  packagingDetails  String?
+  hsCode            String?
   
-  // Address
-  address     String?
-  city        String?
-  state       String?
-  country     String?
-  postalCode  String?
+  // Specifications
+  specifications    ProductSpecification[]
+  features          String[]
   
-  // Coordinates for map display
-  latitude    Float?
-  longitude   Float?
-  
-  // Contact
-  phone       String?
-  email       String?
-  
-  // Company relationship
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  
-  // Products available at this location
-  products    Product[]
-  
-  // Operating hours (JSON for flexibility)
-  operatingHours Json?
-  
-  // Metadata
-  scrapedAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([city])
-  @@index([country])
-  @@index([companyId])
-}
-
-// ============================================
-// REGISTERED SELLERS (from your app)
-// ============================================
-
-// Sellers who register on your platform
-// Links to scraped Company data if domain/name matches
-model Seller {
-  id            String   @id @default(cuid())
-  
-  // Owner info
-  userId        String   @unique
-  email         String   @unique
-  
-  // Business info
-  businessName  String
-  subdomain     String   @unique
-  description   String?
-  
-  // Domain for linking with scraped data
-  domain        String?  @unique // e.g., "acme.com"
-  
-  // Branding
-  logo          String?
-  banner        String?
-  
-  // Contact
-  phone         String?
-  address       String?
+  // Customization
+  isCustomizable    Boolean  @default(false)
+  customizationOptions Json?
+  sampleAvailable   Boolean  @default(false)
+  samplePrice       Float?
+  sampleLeadTime    String?
   
   // Status
-  status        String   @default("pending") // pending, approved, rejected, suspended
-  verified      Boolean  @default(false)
-  rating        Float    @default(0)
+  status            ProductStatus @default(ACTIVE)
+  inStock           Boolean  @default(true)
+  stockQuantity     Int?
   
-  // Linked company from scraped data
-  company       Company?
+  // SEO & Display
+  metaTitle         String?
+  metaDescription   String?
+  featured          Boolean  @default(false)
+  hotSelling        Boolean  @default(false)
+  newArrival        Boolean  @default(false)
   
-  // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Stats
+  viewCount         Int      @default(0)
+  inquiryCount      Int      @default(0)
+  orderCount        Int      @default(0)
+  rating            Float    @default(0)
+  reviewCount       Int      @default(0)
+  
+  // Relations
+  companyId         String
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  locationId        String?
+  location          Location? @relation(fields: [locationId], references: [id])
+  
+  variants          ProductVariant[]
+  reviews           ProductReview[]
+  inquiries         InquiryProduct[]
+  relatedProducts   ProductRelation[] @relation("ProductRelations")
+  relatedTo         ProductRelation[] @relation("RelatedProducts")
+  
+  // Metadata
+  source            String?
+  sourceUrl         String?
+  scrapedAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  publishedAt       DateTime?
+  
+  @@unique([companyId, slug])
+  @@index([name])
+  @@index([categoryId])
+  @@index([companyId])
+  @@index([minPrice])
+  @@index([status])
+  @@index([featured])
+  @@index([viewCount])
+}
+
+// Product Images
+model ProductImage {
+  id          String   @id @default(cuid())
+  
+  url         String
+  altText     String?
+  position    Int      @default(0)
+  isPrimary   Boolean  @default(false)
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([productId])
+}
+
+// Product Videos
+model ProductVideo {
+  id          String   @id @default(cuid())
+  
+  title       String?
+  url         String
+  thumbnail   String?
+  type        String?
+  duration    Int?
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([productId])
+}
+
+// Product Variants (size, color, material combinations)
+model ProductVariant {
+  id              String   @id @default(cuid())
+  
+  name            String
+  sku             String?
+  attributes      Json
+  price           Float?
+  compareAtPrice  Float?
+  inStock         Boolean  @default(true)
+  stockQuantity   Int?
+  images          String[]
+  
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([productId])
+  @@index([sku])
+}
+
+// Product Specifications (key-value pairs)
+model ProductSpecification {
+  id          String   @id @default(cuid())
+  
+  groupName   String?
+  name        String
+  value       String
+  unit        String?
+  position    Int      @default(0)
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+  @@index([name])
+}
+
+// Pricing Tiers (volume discounts)
+model PricingTier {
+  id          String   @id @default(cuid())
+  
+  minQuantity Int
+  maxQuantity Int?
+  price       Float
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+}
+
+// Related Products
+model ProductRelation {
+  id              String   @id @default(cuid())
+  
+  productId       String
+  product         Product  @relation("ProductRelations", fields: [productId], references: [id], onDelete: Cascade)
+  
+  relatedId       String
+  related         Product  @relation("RelatedProducts", fields: [relatedId], references: [id], onDelete: Cascade)
+  
+  type            String   @default("related")
+  
+  @@unique([productId, relatedId])
+  @@index([productId])
+  @@index([relatedId])
+}
+
+// ============================================
+// CATEGORIES (Hierarchical)
+// ============================================
+
+model Category {
+  id              String   @id @default(cuid())
+  
+  name            String
+  slug            String   @unique
+  description     String?
+  
+  icon            String?
+  image           String?
+  banner          String?
+  
+  level           Int      @default(0)
+  parentId        String?
+  parent          Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children        Category[] @relation("CategoryHierarchy")
+  
+  path            String?
+  
+  metaTitle       String?
+  metaDescription String?
+  
+  position        Int      @default(0)
+  featured        Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  
+  productCount    Int      @default(0)
+  
+  products        Product[]
+  attributes      CategoryAttribute[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([slug])
+  @@index([parentId])
+  @@index([level])
+}
+
+// Category Attributes (specs template for products in category)
+model CategoryAttribute {
+  id              String   @id @default(cuid())
+  
+  name            String
+  type            String
+  unit            String?
+  options         String[]
+  required        Boolean  @default(false)
+  filterable      Boolean  @default(true)
+  position        Int      @default(0)
+  
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  @@index([categoryId])
+}
+
+// ============================================
+// LOCATIONS
+// ============================================
+
+model Location {
+  id              String   @id @default(cuid())
+  
+  name            String?
+  type            String?
+  
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+  
+  latitude        Float?
+  longitude       Float?
+  
+  phone           String?
+  email           String?
+  contactPerson   String?
+  
+  size            String?
+  capacity        String?
+  operatingHours  Json?
+  
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  products        Product[]
+  
+  scrapedAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([companyId])
+  @@index([city])
+  @@index([country])
+  @@index([type])
+}
+
+// ============================================
+// INQUIRIES & RFQ (Request for Quote)
+// ============================================
+
+model Inquiry {
+  id              String   @id @default(cuid())
+  
+  inquiryNumber   String   @unique @default(cuid())
+  subject         String
+  message         String   @db.Text
+  
+  buyerName       String
+  buyerEmail      String
+  buyerPhone      String?
+  buyerCompany    String?
+  buyerCountry    String?
+  
+  quantity        Int?
+  unit            String?
+  targetPrice     Float?
+  deliveryDate    DateTime?
+  shippingTerms   String?
+  destination     String?
+  
+  status          InquiryStatus @default(NEW)
+  priority        String?
+  
+  quotedPrice     Float?
+  quotedLeadTime  String?
+  responseDate    DateTime?
+  notes           String?  @db.Text
+  
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  products        InquiryProduct[]
+  messages        InquiryMessage[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([companyId])
+  @@index([status])
+  @@index([buyerEmail])
+  @@index([createdAt])
+}
+
+// Products in an inquiry
+model InquiryProduct {
+  id          String   @id @default(cuid())
+  
+  quantity    Int?
+  notes       String?
+  
+  inquiryId   String
+  inquiry     Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([inquiryId, productId])
+  @@index([inquiryId])
+  @@index([productId])
+}
+
+// Inquiry conversation
+model InquiryMessage {
+  id          String   @id @default(cuid())
+  
+  message     String   @db.Text
+  senderType  String
+  senderName  String?
+  attachments String[]
+  
+  inquiryId   String
+  inquiry     Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([inquiryId])
+}
+
+// ============================================
+// REVIEWS & RATINGS
+// ============================================
+
+model ProductReview {
+  id              String   @id @default(cuid())
+  
+  overallRating   Float
+  qualityRating   Float?
+  valueRating     Float?
+  deliveryRating  Float?
+  
+  title           String?
+  content         String?  @db.Text
+  pros            String[]
+  cons            String[]
+  images          String[]
+  
+  reviewerName    String
+  reviewerCountry String?
+  reviewerCompany String?
+  isVerified      Boolean  @default(false)
+  
+  orderQuantity   Int?
+  orderDate       DateTime?
+  
+  helpfulCount    Int      @default(0)
+  isApproved      Boolean  @default(true)
+  
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([productId])
+  @@index([overallRating])
+}
+
+model SupplierReview {
+  id              String   @id @default(cuid())
+  
+  overallRating   Float
+  communicationRating Float?
+  qualityRating   Float?
+  deliveryRating  Float?
+  serviceRating   Float?
+  
+  title           String?
+  content         String?  @db.Text
+  
+  reviewerName    String
+  reviewerCountry String?
+  reviewerCompany String?
+  isVerified      Boolean  @default(false)
+  
+  orderValue      Float?
+  orderDate       DateTime?
+  
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([companyId])
+  @@index([overallRating])
+}
+
+// ============================================
+// REGISTERED SELLERS (Platform Users)
+// ============================================
+
+model Seller {
+  id              String   @id @default(cuid())
+  
+  userId          String   @unique
+  email           String   @unique
+  
+  businessName    String
+  subdomain       String   @unique
+  description     String?  @db.Text
+  
+  domain          String?  @unique
+  
+  logo            String?
+  banner          String?
+  
+  phone           String?
+  address         String?
+  
+  status          String   @default("pending")
+  verified        Boolean  @default(false)
+  rating          Float    @default(0)
+  
+  plan            String   @default("free")
+  planExpiresAt   DateTime?
+  
+  company         Company?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
   @@index([businessName])
   @@index([subdomain])
@@ -186,37 +715,210 @@ model Seller {
 }
 
 // ============================================
-// SEARCH & CATEGORIES
+// TRADE SHOWS & EVENTS
 // ============================================
 
-// Product categories for navigation
-model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?
-  icon        String?
-  image       String?
-  parentId    String?
-  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryHierarchy")
+model TradeShow {
+  id              String   @id @default(cuid())
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  name            String
+  slug            String   @unique
+  description     String?  @db.Text
   
-  @@index([slug])
-  @@index([parentId])
+  venue           String?
+  city            String?
+  country         String?
+  
+  startDate       DateTime
+  endDate         DateTime
+  
+  logo            String?
+  banner          String?
+  website         String?
+  
+  industry        String?
+  categories      String[]
+  
+  exhibitorCount  Int?
+  visitorCount    Int?
+  
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([startDate])
+  @@index([country])
+  @@index([industry])
 }
 
-// Search history for analytics
-model SearchQuery {
-  id          String   @id @default(cuid())
-  query       String
-  userId      String?
-  resultsCount Int     @default(0)
+// ============================================
+// TARIFFS & HS CODES
+// ============================================
+
+model HSCode {
+  id              String   @id @default(cuid())
   
-  createdAt   DateTime @default(now())
+  code            String   @unique
+  description     String
+  chapter         String?
+  heading         String?
+  subheading      String?
+  
+  tariffRates     TariffRate[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([code])
+  @@index([chapter])
+}
+
+model TariffRate {
+  id              String   @id @default(cuid())
+  
+  destinationCountry String
+  originCountry   String?
+  rate            Float
+  rateType        String?
+  currency        String   @default("USD")
+  notes           String?
+  
+  effectiveFrom   DateTime?
+  effectiveUntil  DateTime?
+  
+  hsCodeId        String
+  hsCode          HSCode   @relation(fields: [hsCodeId], references: [id], onDelete: Cascade)
+  
+  updatedAt       DateTime @updatedAt
+  
+  @@index([hsCodeId])
+  @@index([destinationCountry])
+  @@index([originCountry])
+}
+
+// ============================================
+// SHIPPING & LOGISTICS
+// ============================================
+
+model Port {
+  id              String   @id @default(cuid())
+  
+  name            String
+  code            String   @unique
+  type            String?
+  
+  city            String?
+  country         String
+  
+  latitude        Float?
+  longitude       Float?
+  
+  isActive        Boolean  @default(true)
+  
+  @@index([country])
+  @@index([type])
+}
+
+model ShippingRoute {
+  id              String   @id @default(cuid())
+  
+  originPort      String
+  destinationPort String
+  
+  transitDays     Int?
+  estimatedCost   Float?
+  costUnit        String?
+  
+  carrier         String?
+  serviceType     String?
+  
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([originPort, destinationPort, carrier, serviceType])
+  @@index([originPort])
+  @@index([destinationPort])
+}
+
+// ============================================
+// ANALYTICS & SEARCH
+// ============================================
+
+model SearchQuery {
+  id              String   @id @default(cuid())
+  
+  query           String
+  userId          String?
+  sessionId       String?
+  
+  resultsCount    Int      @default(0)
+  clickedProductId String?
+  
+  filters         Json?
+  
+  createdAt       DateTime @default(now())
   
   @@index([query])
   @@index([createdAt])
+}
+
+model PopularSearch {
+  id              String   @id @default(cuid())
+  
+  query           String   @unique
+  searchCount     Int      @default(1)
+  categoryId      String?
+  
+  updatedAt       DateTime @updatedAt
+  
+  @@index([searchCount])
+}
+
+model PageView {
+  id              String   @id @default(cuid())
+  
+  pageType        String
+  pageId          String
+  
+  userId          String?
+  sessionId       String?
+  country         String?
+  referrer        String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([pageType, pageId])
+  @@index([createdAt])
+}
+
+// ============================================
+// SAVED / FAVORITES
+// ============================================
+
+model SavedProduct {
+  id              String   @id @default(cuid())
+  
+  userId          String
+  productId       String
+  
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model SavedSupplier {
+  id              String   @id @default(cuid())
+  
+  userId          String
+  companyId       String
+  
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([userId, companyId])
+  @@index([userId])
 }
