@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +27,14 @@ type SellerDashboardProps = {
 };
 
 export function SellerDashboard({ seller, user }: SellerDashboardProps) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    router.refresh();
+    router.push('/');
+  };
 
   const stats = [
     { label: 'Total Sales', value: `$${seller.totalSales.toLocaleString()}`, icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' },
@@ -152,7 +160,7 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-gray-600 hover:text-red-600 hover:bg-red-50"
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={handleSignOut}
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign out

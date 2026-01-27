@@ -42,12 +42,19 @@ type DeleteState = {
 };
 
 export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDashboardProps) {
+  const router = useRouter();
   const [state, action, isPending] = useActionState<DeleteState, FormData>(
     deleteSubdomainAction,
     {}
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'sellers' | 'users' | 'subdomains'>('overview');
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    router.refresh();
+    router.push('/');
+  };
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const router = useRouter();
@@ -193,7 +200,7 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
               <Button 
                 variant="ghost" 
                 className="w-full justify-start text-gray-600 hover:text-red-600 hover:bg-red-50"
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={handleSignOut}
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign out

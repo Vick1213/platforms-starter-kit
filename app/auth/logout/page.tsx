@@ -2,13 +2,20 @@
 
 import { useEffect } from 'react';
 import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 export default function LogoutPage() {
+  const router = useRouter();
+
   useEffect(() => {
-    // Automatically sign out and redirect to home
-    signOut({ callbackUrl: '/' });
-  }, []);
+    const performSignOut = async () => {
+      await signOut({ redirect: false });
+      router.refresh();
+      router.push('/');
+    };
+    performSignOut();
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

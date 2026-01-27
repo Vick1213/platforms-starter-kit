@@ -1,6 +1,7 @@
 'use client';
 
 import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Store } from 'lucide-react';
 import type { UserRole } from '@/lib/auth-config';
@@ -15,6 +16,14 @@ type UserNavProps = {
 };
 
 export function UserNav({ user }: UserNavProps) {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    router.refresh();
+    router.push('/');
+  };
+
   if (!user) {
     return (
       <>
@@ -38,7 +47,7 @@ export function UserNav({ user }: UserNavProps) {
         </a>
       )}
       <button 
-        onClick={() => signOut({ callbackUrl: '/' })}
+        onClick={handleSignOut}
         className="text-gray-600 hover:text-orange-600 cursor-pointer"
       >
         Sign Out
