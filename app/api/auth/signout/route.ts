@@ -1,45 +1,46 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 export async function POST() {
-  const cookieStore = await cookies();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const domain = isProduction ? '.supplyme.asia' : 'localhost';
   
-  // Cookie names used by NextAuth
+  // Cookie names used by NextAuth/Auth.js
   const cookieNames = [
-    // Production cookies
+    // Auth.js v5 cookies (production)
     '__Secure-authjs.session-token',
     '__Secure-authjs.callback-url',
     '__Host-authjs.csrf-token',
-    // Development cookies
+    // Auth.js v5 cookies (development)
     'authjs.session-token',
     'authjs.callback-url',
     'authjs.csrf-token',
-    // Legacy NextAuth cookies (just in case)
-    'next-auth.session-token',
-    'next-auth.callback-url',
-    'next-auth.csrf-token',
-    '__Secure-next-auth.session-token',
-    '__Secure-next-auth.callback-url',
   ];
 
-  const isProduction = process.env.NODE_ENV === 'production';
-  const domain = isProduction ? '.supplyme.asia' : undefined;
-
-  // Delete all auth-related cookies
+  // Build response with Set-Cookie headers to clear all cookies
+  const response = NextResponse.json({ success: true });
+  
   for (const name of cookieNames) {
-    // Delete with domain (for cross-subdomain cookies)
-    cookieStore.delete({
-      name,
+    // Clear cookie with domain (cross-subdomain)
+    response.cookies.set(name, '', {
+      expires: new Date(0),
       path: '/',
-      domain,
+      domain: isProduction ? domain : undefined,
+      secure: isProduction,
+      httpOnly: true,
+      sameSite: 'lax',
     });
     
-    // Also try deleting without domain (for subdomain-specific cookies)
-    cookieStore.delete({
-      name,
-      path: '/',
-    });
+    // Also clear without domain (subdomain-specific)
+    if (isProduction) {
+      response.cookies.set(name, '', {
+        expires: new Date(0),
+        path: '/',
+        secure: true,
+        httpOnly: true,
+        sameSite: 'lax',
+      });
+    }
   }
 
-  return NextResponse.json({ success: true });
+  return response;
 }
