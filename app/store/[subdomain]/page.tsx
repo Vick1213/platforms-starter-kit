@@ -2,9 +2,13 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getSellerBySubdomain } from '@/lib/db';
-import { protocol, rootDomain } from '@/lib/utils';
+import { protocol, rootDomain, getMainSiteUrl, getSellerPortalUrl } from '@/lib/utils';
 import { ShoppingBag, Star, Shield, Truck, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+// Get URLs at build time for static generation
+const mainSiteUrl = getMainSiteUrl();
+const sellerPortalUrl = getSellerPortalUrl();
 
 export async function generateMetadata({
   params
@@ -40,7 +44,7 @@ export default async function StorePage({
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex flex-col">
         <header className="w-full py-4 px-6 border-b bg-white/80 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto">
-            <Link href={`https://platforms-starter-kit-xi-rouge.vercel.app`} className="flex items-center gap-2">
+            <Link href={mainSiteUrl} className="flex items-center gap-2">
               <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
                 <ShoppingBag className="w-6 h-6 text-white" />
               </div>
@@ -68,12 +72,12 @@ export default async function StorePage({
                 : "This store is pending approval from our team."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="https://platforms-starter-kit-xi-rouge.vercel.app">
+              <Link href={mainSiteUrl}>
                 <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-8">
                   Visit Marketplace
                 </Button>
               </Link>
-              <Link href="https://platforms-starter-kit-xi-rouge.vercel.app/auth/seller-register">
+              <Link href={`${sellerPortalUrl}/auth/seller-register`}>
                 <Button variant="outline" className="px-8">
                   Register This Store
                 </Button>
