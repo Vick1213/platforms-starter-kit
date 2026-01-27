@@ -294,9 +294,9 @@ export default async function StorePage({
                   className="bg-white rounded-xl overflow-hidden shadow-sm border hover:shadow-md transition-shadow group"
                 >
                   <div className="aspect-square relative bg-gray-100">
-                    {product.images && product.images.length > 0 ? (
+                    {product.images && product.images.length > 0 && product.images[0]?.url ? (
                       <img
-                        src={product.images[0]}
+                        src={product.images[0].url}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
@@ -305,7 +305,7 @@ export default async function StorePage({
                         <ShoppingBag className="w-12 h-12 text-gray-300" />
                       </div>
                     )}
-                    {product.status === 'active' && (
+                    {product.status === 'ACTIVE' && (
                       <span className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
                         In Stock
                       </span>
@@ -316,9 +316,13 @@ export default async function StorePage({
                       {product.name}
                     </h3>
                     <p className="store-primary-text font-bold">
-                      {product.minPrice === product.maxPrice 
-                        ? `$${product.minPrice.toFixed(2)}`
-                        : `$${product.minPrice.toFixed(2)} - $${product.maxPrice.toFixed(2)}`
+                      {product.minPrice != null && product.maxPrice != null
+                        ? (product.minPrice === product.maxPrice 
+                            ? `$${product.minPrice.toFixed(2)}`
+                            : `$${product.minPrice.toFixed(2)} - $${product.maxPrice.toFixed(2)}`)
+                        : product.minPrice != null
+                            ? `$${product.minPrice.toFixed(2)}`
+                            : 'Contact for price'
                       }
                     </p>
                     {product.moq && product.moq > 1 && (

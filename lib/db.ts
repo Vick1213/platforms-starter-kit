@@ -589,7 +589,11 @@ export async function getProductsBySellerId(sellerId: string) {
             name: true,
             slug: true,
           }
-        }
+        },
+        images: {
+          orderBy: { position: 'asc' },
+          take: 1,
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -647,7 +651,11 @@ export async function getActiveProductsBySellerId(sellerId: string) {
             name: true,
             slug: true,
           }
-        }
+        },
+        images: {
+          orderBy: { position: 'asc' },
+          take: 1,
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
