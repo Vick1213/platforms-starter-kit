@@ -27,14 +27,32 @@ function extractSubdomain(request: NextRequest): string | null {
     return null;
   }
 
-  // Production environment
-  const rootDomainFormatted = rootDomain.split(':')[0];
-
-  // Handle preview deployment URLs (tenant---branch-name.vercel.app)
-  if (hostname.includes('---') && hostname.endsWith('.vercel.app')) {
-    const parts = hostname.split('---');
-    return parts.length > 0 ? parts[0] : null;
+  // Vercel deployment URLs
+  // Format: subdomain.project-name.vercel.app
+  if (hostname.endsWith('.vercel.app')) {
+    const parts = hostname.split('.');
+    // parts = ['subdomain', 'project-name', 'vercel', 'app']
+    // or ['project-name', 'vercel', 'app'] (no subdomain)
+    
+    // Handle preview deployment URLs (tenant---branch-name.vercel.app)
+    if (hostname.includes('---')) {
+      const firstPart = parts[0];
+      const tenantParts = firstPart.split('---');
+      return tenantParts.length > 1 ? tenantParts[0] : null;
+    }
+    
+    // Regular Vercel deployment: subdomain.project-name.vercel.app
+    // If there are 4+ parts, first part is subdomain
+    if (parts.length >= 4) {
+      return parts[0];
+    }
+    
+    // No subdomain (just project-name.vercel.app)
+    return null;
   }
+
+  // Production environment with custom domain
+  const rootDomainFormatted = rootDomain.split(':')[0];
 
   // Regular subdomain detection
   const isSubdomain =
@@ -107,13 +125,6 @@ export async function middleware(request: NextRequest) {
     // Rewrite root to store page
     if (pathname === '/') {
       return NextResponse.rewrite(new URL(`/store/${subdomain}`, request.url), {
-        headers: requestHeaders,
-      });
-    }
-
-    // Handle legacy subdomain format
-    if (pathname === '/') {
-      return NextResponse.rewrite(new URL(`/s/${subdomain}`, request.url), {
         headers: requestHeaders,
       });
     }

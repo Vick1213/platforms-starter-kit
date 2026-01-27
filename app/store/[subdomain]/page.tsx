@@ -34,8 +34,61 @@ export default async function StorePage({
   const { subdomain } = await params;
   const seller = await getSellerBySubdomain(subdomain);
 
+  // Show "store not found" page for non-existent or unapproved stores
   if (!seller || seller.status !== 'approved') {
-    notFound();
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex flex-col">
+        <header className="w-full py-4 px-6 border-b bg-white/80 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto">
+            <Link href={`https://platforms-starter-kit-xi-rouge.vercel.app`} className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
+                <ShoppingBag className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                MarketPlace
+              </span>
+            </Link>
+          </div>
+        </header>
+        
+        <main className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center max-w-md">
+            <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShoppingBag className="w-12 h-12 text-orange-500" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Store Not Found
+            </h1>
+            <p className="text-gray-600 mb-2">
+              The store <span className="font-semibold text-orange-600">&quot;{subdomain}&quot;</span> doesn&apos;t exist or is not yet available.
+            </p>
+            <p className="text-gray-500 text-sm mb-8">
+              {!seller 
+                ? "This subdomain hasn't been registered yet." 
+                : "This store is pending approval from our team."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="https://platforms-starter-kit-xi-rouge.vercel.app">
+                <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-8">
+                  Visit Marketplace
+                </Button>
+              </Link>
+              <Link href="https://platforms-starter-kit-xi-rouge.vercel.app/auth/seller-register">
+                <Button variant="outline" className="px-8">
+                  Register This Store
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </main>
+        
+        <footer className="py-4 px-6 border-t bg-white/80 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto text-center text-sm text-gray-500">
+            © 2026 MarketPlace. All rights reserved.
+          </div>
+        </footer>
+      </div>
+    );
   }
 
   return (
