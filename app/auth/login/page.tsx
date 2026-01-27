@@ -232,7 +232,7 @@ export default function LoginPage() {
               <ShoppingBag className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-              MarketPlace
+              Supply Me
             </span>
           </Link>
         </div>
@@ -248,7 +248,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="py-4 px-6 border-t bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto text-center text-sm text-gray-500">
-          © 2026 MarketPlace. All rights reserved.
+          © 2026 Supply Me. All rights reserved.
         </div>
       </footer>
     </div>

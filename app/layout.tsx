@@ -10,8 +10,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: 'MarketPlace - Shop from Trusted Sellers',
-  description: 'Your trusted marketplace for quality products from verified sellers and manufacturers worldwide.'
+  title: 'Supply Me - Connect with Asian Manufacturers',
+  description: 'Your B2B platform to discover manufacturers in Asia, check tariffs, manage supply chains, and get transport quotes for your imports.'
 };
 
 export default function RootLayout({

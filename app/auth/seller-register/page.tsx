@@ -131,7 +131,7 @@ export default function SellerRegisterPage() {
               <ShoppingBag className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-              MarketPlace
+              Supply Me
             </span>
           </Link>
           <Link href="/auth/login" className="text-sm text-gray-600 hover:text-orange-600">
@@ -147,10 +147,10 @@ export default function SellerRegisterPage() {
             {/* Benefits Section */}
             <div className="lg:sticky lg:top-8">
               <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Start selling on <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">MarketPlace</span>
+                List your factory on <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">Supply Me</span>
               </h1>
               <p className="text-lg text-gray-600 mb-8">
-                Join thousands of manufacturers and sellers reaching millions of customers worldwide.
+                Join thousands of Asian manufacturers connecting with global importers.
               </p>
 
               <div className="space-y-6">
@@ -434,7 +434,7 @@ export default function SellerRegisterPage() {
       {/* Footer */}
       <footer className="py-4 px-6 border-t bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto text-center text-sm text-gray-500">
-          © 2026 MarketPlace. All rights reserved.
+          © 2026 Supply Me. All rights reserved.
         </div>
       </footer>
     </div>

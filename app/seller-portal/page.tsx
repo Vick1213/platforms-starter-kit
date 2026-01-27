@@ -6,13 +6,13 @@ import { getMainSiteUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { 
-  Store, TrendingUp, Shield, Users, ChevronRight, 
-  DollarSign, Package, BarChart3, Globe, CheckCircle2 
+  Factory, TrendingUp, Shield, Users, ChevronRight, 
+  DollarSign, Package, BarChart3, Globe, CheckCircle2, Ship, Calculator
 } from 'lucide-react';
 
 export const metadata = {
-  title: 'Seller Portal | SupplyMe',
-  description: 'Register and manage your store on SupplyMe marketplace'
+  title: 'Manufacturer Portal | Supply Me',
+  description: 'List your factory on Supply Me and connect with importers worldwide'
 };
 
 export default async function SellerPortalPage() {
@@ -29,19 +29,19 @@ export default async function SellerPortalPage() {
   }
 
   const features = [
-    { icon: Globe, title: 'Your Own Subdomain', description: 'Get yourstore.supplyme.asia instantly' },
-    { icon: DollarSign, title: 'Low Fees', description: 'Competitive commission rates' },
-    { icon: Package, title: 'Easy Inventory', description: 'Simple product management' },
-    { icon: BarChart3, title: 'Analytics', description: 'Track your performance' },
-    { icon: Shield, title: 'Secure Payments', description: 'Safe and reliable transactions' },
-    { icon: Users, title: 'Large Audience', description: 'Reach millions of customers' },
+    { icon: Globe, title: 'Global Reach', description: 'Connect with importers from 150+ countries' },
+    { icon: Calculator, title: 'Tariff Integration', description: 'Show import duties to buyers' },
+    { icon: Ship, title: 'Shipping Partners', description: 'Integrated logistics quotes' },
+    { icon: BarChart3, title: 'Analytics Dashboard', description: 'Track inquiries and performance' },
+    { icon: Shield, title: 'Verified Badge', description: 'Build trust with verification' },
+    { icon: Users, title: 'Direct Communication', description: 'Chat directly with buyers' },
   ];
 
   const steps = [
-    { number: '1', title: 'Create Account', description: 'Sign up with your email or Google account' },
-    { number: '2', title: 'Set Up Store', description: 'Add your business details and choose a subdomain' },
-    { number: '3', title: 'Get Approved', description: 'Our team reviews your application' },
-    { number: '4', title: 'Start Selling', description: 'Add products and start making sales' },
+    { number: '1', title: 'Create Account', description: 'Sign up with your business email' },
+    { number: '2', title: 'Add Factory Details', description: 'List your products, certifications, and capacity' },
+    { number: '3', title: 'Get Verified', description: 'Our team verifies your factory credentials' },
+    { number: '4', title: 'Start Exporting', description: 'Receive inquiries from global importers' },
   ];
 
   return (
@@ -52,16 +52,16 @@ export default async function SellerPortalPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
-                <Store className="w-6 h-6 text-white" />
+                <Factory className="w-6 h-6 text-white" />
               </div>
               <div>
-                <span className="text-xl font-bold text-gray-900">Seller Portal</span>
-                <span className="text-xs text-gray-500 block">by SupplyMe</span>
+                <span className="text-xl font-bold text-gray-900">Manufacturer Portal</span>
+                <span className="text-xs text-gray-500 block">by Supply Me</span>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <a href={getMainSiteUrl()} className="text-gray-600 hover:text-orange-600 text-sm">
-                ← Back to Marketplace
+                ← Back to Platform
               </a>
               {session?.user ? (
                 <div className="flex items-center gap-3">
@@ -91,27 +91,27 @@ export default async function SellerPortalPage() {
       <section className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Start Selling on{' '}
+            List Your Factory on{' '}
             <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-              SupplyMe
+              Supply Me
             </span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Join thousands of successful sellers. Get your own branded store, reach millions of customers, and grow your business.
+            Connect with importers worldwide. Showcase your manufacturing capabilities, receive direct inquiries, and grow your export business.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             {session?.user ? (
               <Link href="/auth/seller-register">
                 <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 font-semibold text-lg px-8">
-                  <Store className="w-5 h-5 mr-2" />
+                  <Factory className="w-5 h-5 mr-2" />
                   Complete Registration
                 </Button>
               </Link>
             ) : (
               <Link href="/auth/seller-register">
                 <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 font-semibold text-lg px-8">
-                  <Store className="w-5 h-5 mr-2" />
-                  Create Seller Account
+                  <Factory className="w-5 h-5 mr-2" />
+                  Register Your Factory
                 </Button>
               </Link>
             )}
@@ -128,7 +128,7 @@ export default async function SellerPortalPage() {
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Why Sell on SupplyMe?
+            Why List on Supply Me?
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
@@ -173,14 +173,14 @@ export default async function SellerPortalPage() {
       <section className="py-16 px-4 bg-gradient-to-r from-orange-500 to-amber-500">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Start Selling?
+            Ready to Expand Your Export Business?
           </h2>
           <p className="text-orange-100 mb-8 text-lg">
-            Join our marketplace today and reach customers worldwide
+            Join Supply Me today and connect with importers worldwide
           </p>
           <Link href="/auth/seller-register">
             <Button size="lg" className="bg-white text-orange-600 hover:bg-orange-50 font-semibold text-lg px-8">
-              Create Your Store Now
+              List Your Factory Now
             </Button>
           </Link>
         </div>
@@ -191,18 +191,18 @@ export default async function SellerPortalPage() {
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
-              <Store className="w-4 h-4 text-white" />
+              <Factory className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-white">Seller Portal</span>
+            <span className="font-bold text-white">Manufacturer Portal</span>
           </div>
-          <p className="text-sm mb-4">Part of the SupplyMe Marketplace</p>
+          <p className="text-sm mb-4">Part of the Supply Me Platform</p>
           <div className="flex justify-center gap-6 text-sm">
-            <a href={getMainSiteUrl()} className="hover:text-white">Marketplace</a>
+            <a href={getMainSiteUrl()} className="hover:text-white">Platform</a>
             <Link href="/terms" className="hover:text-white">Terms</Link>
             <Link href="/privacy" className="hover:text-white">Privacy</Link>
             <Link href="/contact" className="hover:text-white">Contact</Link>
           </div>
-          <p className="text-xs mt-8">© 2026 SupplyMe. All rights reserved.</p>
+          <p className="text-xs mt-8">© 2026 Supply Me. All rights reserved.</p>
         </div>
       </footer>
     </div>

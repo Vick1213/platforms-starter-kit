@@ -70,8 +70,8 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
                   <ShoppingBag className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <span className="font-bold text-gray-900 block">Seller Portal</span>
-                  <span className="text-xs text-gray-500">MarketPlace</span>
+                  <span className="font-bold text-gray-900 block">Manufacturer Portal</span>
+                  <span className="text-xs text-gray-500">Supply Me</span>
                 </div>
               </Link>
             </div>
