@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useActionState } from 'react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
@@ -12,7 +13,7 @@ import {
   Package, DollarSign, Menu, X, ExternalLink, Shield
 } from 'lucide-react';
 import { deleteSubdomainAction } from '@/app/actions';
-import { rootDomain, protocol } from '@/lib/utils';
+import { rootDomain, buildSubdomainUrl, isVercelPreview } from '@/lib/utils';
 import type { Seller, User } from '@/lib/types';
 import type { UserRole } from '@/lib/auth-config';
 
@@ -47,6 +48,49 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'sellers' | 'users' | 'subdomains'>('overview');
+  const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const router = useRouter();
+
+  // Helper to show a notification
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Helper to format subdomain display
+  const formatSubdomain = (subdomain: string) => {
+    return isVercelPreview ? `${subdomain}---${rootDomain}` : `${subdomain}.${rootDomain}`;
+  };
+
+  // Handle seller actions (approve, reject, suspend, delete)
+  const handleSellerAction = async (sellerId: string, action: 'approve' | 'reject' | 'suspend' | 'unsuspend' | 'delete') => {
+    setLoadingActions(prev => ({ ...prev, [`${sellerId}-${action}`]: true }));
+    
+    try {
+      const method = action === 'delete' ? 'DELETE' : 'PATCH';
+      const body = action === 'delete' ? undefined : JSON.stringify({ action });
+      
+      const response = await fetch(`/api/admin/sellers/${sellerId}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update seller');
+      }
+
+      showNotification('success', data.message);
+      router.refresh(); // Refresh the page to get updated data
+    } catch (error) {
+      showNotification('error', error instanceof Error ? error.message : 'An error occurred');
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [`${sellerId}-${action}`]: false }));
+    }
+  };
 
   const stats = [
     { label: 'Total Users', value: users.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -214,10 +258,19 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
                           <div key={seller.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div>
                               <p className="font-medium">{seller.businessName}</p>
-                              <p className="text-sm text-gray-500">{seller.subdomain}.{rootDomain}</p>
+                              <p className="text-sm text-gray-500">{formatSubdomain(seller.subdomain)}</p>
                             </div>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                              Approve
+                            <Button 
+                              size="sm" 
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleSellerAction(seller.id, 'approve')}
+                              disabled={loadingActions[`${seller.id}-approve`]}
+                            >
+                              {loadingActions[`${seller.id}-approve`] ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'Approve'
+                              )}
                             </Button>
                           </div>
                         ))}
@@ -240,10 +293,10 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
                           <div key={seller.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div>
                               <p className="font-medium">{seller.businessName}</p>
-                              <p className="text-sm text-gray-500">{seller.subdomain}.{rootDomain}</p>
+                              <p className="text-sm text-gray-500">{formatSubdomain(seller.subdomain)}</p>
                             </div>
                             <a 
-                              href={`${protocol}://${seller.subdomain}.${rootDomain}`}
+                              href={buildSubdomainUrl(seller.subdomain)}
                               target="_blank"
                               className="text-blue-600 hover:underline text-sm flex items-center gap-1"
                             >
@@ -274,7 +327,7 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
                   {sellers.map(seller => (
                     <Card key={seller.id}>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
                               <Store className="w-6 h-6 text-orange-600" />
@@ -282,30 +335,138 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
                             <div>
                               <h3 className="font-semibold text-gray-900">{seller.businessName}</h3>
                               <p className="text-sm text-gray-500">{seller.businessEmail}</p>
-                              <p className="text-sm text-blue-600">{seller.subdomain}.{rootDomain}</p>
+                              <a 
+                                href={buildSubdomainUrl(seller.subdomain)}
+                                target="_blank"
+                                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                {formatSubdomain(seller.subdomain)}
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               seller.status === 'approved' ? 'bg-green-100 text-green-700' :
                               seller.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                              'bg-red-100 text-red-700'
+                              seller.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
                             }`}>
                               {seller.status.charAt(0).toUpperCase() + seller.status.slice(1)}
                             </span>
+                            
+                            {/* Action buttons based on status */}
                             {seller.status === 'pending' && (
                               <>
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                                  <CheckCircle2 className="w-4 h-4 mr-1" />
-                                  Approve
+                                <Button 
+                                  size="sm" 
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => handleSellerAction(seller.id, 'approve')}
+                                  disabled={loadingActions[`${seller.id}-approve`]}
+                                >
+                                  {loadingActions[`${seller.id}-approve`] ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                                      Approve
+                                    </>
+                                  )}
                                 </Button>
-                                <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
-                                  <XCircle className="w-4 h-4 mr-1" />
-                                  Reject
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-red-600 hover:bg-red-50"
+                                  onClick={() => handleSellerAction(seller.id, 'reject')}
+                                  disabled={loadingActions[`${seller.id}-reject`]}
+                                >
+                                  {loadingActions[`${seller.id}-reject`] ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      Reject
+                                    </>
+                                  )}
                                 </Button>
                               </>
                             )}
+                            
+                            {seller.status === 'approved' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-amber-600 hover:bg-amber-50"
+                                onClick={() => handleSellerAction(seller.id, 'suspend')}
+                                disabled={loadingActions[`${seller.id}-suspend`]}
+                              >
+                                {loadingActions[`${seller.id}-suspend`] ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  'Suspend'
+                                )}
+                              </Button>
+                            )}
+                            
+                            {seller.status === 'suspended' && (
+                              <Button 
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => handleSellerAction(seller.id, 'unsuspend')}
+                                disabled={loadingActions[`${seller.id}-unsuspend`]}
+                              >
+                                {loadingActions[`${seller.id}-unsuspend`] ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  'Unsuspend'
+                                )}
+                              </Button>
+                            )}
+                            
+                            {seller.status === 'rejected' && (
+                              <Button 
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => handleSellerAction(seller.id, 'approve')}
+                                disabled={loadingActions[`${seller.id}-approve`]}
+                              >
+                                {loadingActions[`${seller.id}-approve`] ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  'Approve'
+                                )}
+                              </Button>
+                            )}
+                            
+                            {/* Delete button for all statuses */}
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete ${seller.businessName}? This cannot be undone.`)) {
+                                  handleSellerAction(seller.id, 'delete');
+                                }
+                              }}
+                              disabled={loadingActions[`${seller.id}-delete`]}
+                            >
+                              {loadingActions[`${seller.id}-delete`] ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
                           </div>
+                        </div>
+                        
+                        {/* Additional seller details */}
+                        {seller.description && (
+                          <p className="mt-3 text-sm text-gray-600 border-t pt-3">{seller.description}</p>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-500">
+                          <span>Created: {new Date(seller.createdAt).toLocaleDateString()}</span>
+                          {seller.businessPhone && <span>Phone: {seller.businessPhone}</span>}
+                          {seller.verified && <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Verified</span>}
                         </div>
                       </CardContent>
                     </Card>
@@ -415,7 +576,7 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
                         </div>
                         <div className="mt-4">
                           <a
-                            href={`${protocol}://${tenant.subdomain}.${rootDomain}`}
+                            href={buildSubdomainUrl(tenant.subdomain)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-500 hover:underline text-sm flex items-center gap-1"
@@ -442,15 +603,27 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
       )}
 
       {/* Toast Notifications */}
-      {state.error && (
-        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md z-50">
-          {state.error}
-        </div>
-      )}
-
-      {state.success && (
-        <div className="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-md z-50">
-          {state.success}
+      {(state.error || state.success || notification) && (
+        <div className="fixed bottom-4 right-4 z-50 space-y-2">
+          {state.error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md">
+              {state.error}
+            </div>
+          )}
+          {state.success && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-md">
+              {state.success}
+            </div>
+          )}
+          {notification && (
+            <div className={`px-4 py-3 rounded shadow-md ${
+              notification.type === 'success' 
+                ? 'bg-green-100 border border-green-400 text-green-700' 
+                : 'bg-red-100 border border-red-400 text-red-700'
+            }`}>
+              {notification.message}
+            </div>
+          )}
         </div>
       )}
     </div>

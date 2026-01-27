@@ -29,7 +29,7 @@ export interface Seller {
   subdomain: string;
   customDomain: string | null; // For manufacturers with existing websites
   verified: boolean;
-  status: 'pending' | 'approved' | 'suspended';
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
   rating: number;
   totalSales: number;
   createdAt: number;
