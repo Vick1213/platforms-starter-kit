@@ -8,6 +8,7 @@ import {
   Laptop, Shirt, Home as HomeIcon, Sparkles, Gift
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UserNav } from '@/components/user-nav';
 
 export default async function HomePage() {
   const session = await auth();
@@ -44,28 +45,11 @@ export default async function HomePage() {
               <span className="hidden md:inline">Download App</span>
             </div>
             <div className="flex items-center gap-4">
-              {session?.user ? (
-                <div className="flex items-center gap-4">
-                  <span className="text-gray-600">Hi, {session.user.name?.split(' ')[0] || 'User'}</span>
-                  {session.user.role === 'SELLER' && (
-                    <Link href="/seller" className="text-orange-600 hover:underline font-medium">
-                      Seller Dashboard
-                    </Link>
-                  )}
-                  <Link href="/api/auth/signout" className="text-gray-600 hover:text-orange-600">
-                    Sign Out
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <Link href="/auth/login" className="text-gray-600 hover:text-orange-600">
-                    Sign In
-                  </Link>
-                  <Link href="/auth/register" className="text-orange-600 font-medium hover:underline">
-                    Register
-                  </Link>
-                </>
-              )}
+              <UserNav user={session?.user ? {
+                name: session.user.name,
+                email: session.user.email,
+                role: session.user.role
+              } : null} />
             </div>
           </div>
           

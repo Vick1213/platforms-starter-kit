@@ -1,0 +1,21 @@
+'use client';
+
+import { useEffect } from 'react';
+import { signOut } from 'next-auth/react';
+import { Loader2 } from 'lucide-react';
+
+export default function LogoutPage() {
+  useEffect(() => {
+    // Automatically sign out and redirect to home
+    signOut({ callbackUrl: '/' });
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-4" />
+        <p className="text-gray-600">Signing out...</p>
+      </div>
+    </div>
+  );
+}
