@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     // Search companies
     const params = {
       query: searchParams.get('q') || undefined,
-      industry: searchParams.get('industry') || undefined,
+      businessType: searchParams.get('businessType') || undefined,
       country: searchParams.get('country') || undefined,
       city: searchParams.get('city') || undefined,
       linkedOnly: searchParams.get('linkedOnly') === 'true',

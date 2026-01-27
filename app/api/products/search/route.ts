@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       city: searchParams.get('city') || undefined,
       page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
       limit: searchParams.get('limit') ? Math.min(Number(searchParams.get('limit')), 100) : 20,
-      sortBy: (searchParams.get('sortBy') as 'price' | 'name' | 'scrapedAt') || 'scrapedAt',
+      sortBy: (searchParams.get('sortBy') as 'minPrice' | 'name' | 'scrapedAt') || 'scrapedAt',
       sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
     };
 

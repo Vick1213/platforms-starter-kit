@@ -17,7 +17,7 @@ export interface ProductSearchParams {
   city?: string;
   page?: number;
   limit?: number;
-  sortBy?: 'price' | 'name' | 'scrapedAt';
+  sortBy?: 'minPrice' | 'name' | 'scrapedAt';
   sortOrder?: 'asc' | 'desc';
 }
 
@@ -60,15 +60,15 @@ export async function searchProducts(params: ProductSearchParams): Promise<Produ
 
   // Filters
   if (category) {
-    where.category = { equals: category, mode: 'insensitive' };
+    where.categoryId = category;
   }
   if (brand) {
     where.brand = { equals: brand, mode: 'insensitive' };
   }
   if (minPrice !== undefined || maxPrice !== undefined) {
-    where.price = {};
-    if (minPrice !== undefined) where.price.gte = minPrice;
-    if (maxPrice !== undefined) where.price.lte = maxPrice;
+    where.minPrice = {};
+    if (minPrice !== undefined) where.minPrice.gte = minPrice;
+    if (maxPrice !== undefined) where.minPrice.lte = maxPrice;
   }
   if (inStock !== undefined) {
     where.inStock = inStock;
@@ -97,7 +97,7 @@ export async function searchProducts(params: ProductSearchParams): Promise<Produ
             name: true,
             logo: true,
             domain: true,
-            verified: true,
+            verificationStatus: true,
             sellerId: true,
             seller: {
               select: {
@@ -150,7 +150,7 @@ export async function searchProducts(params: ProductSearchParams): Promise<Produ
 
 export interface CompanySearchParams {
   query?: string;
-  industry?: string;
+  businessType?: string;
   country?: string;
   city?: string;
   linkedOnly?: boolean; // Only show companies linked to registered sellers
@@ -161,7 +161,7 @@ export interface CompanySearchParams {
 export async function searchCompanies(params: CompanySearchParams) {
   const {
     query,
-    industry,
+    businessType,
     country,
     city,
     linkedOnly = false,
@@ -178,8 +178,8 @@ export async function searchCompanies(params: CompanySearchParams) {
       { domain: { contains: query, mode: 'insensitive' } },
     ];
   }
-  if (industry) {
-    where.industry = { equals: industry, mode: 'insensitive' };
+  if (businessType) {
+    where.businessType = businessType as any;
   }
   if (country) {
     where.country = { equals: country, mode: 'insensitive' };
@@ -210,6 +210,7 @@ export async function searchCompanies(params: CompanySearchParams) {
           select: {
             products: true,
             locations: true,
+            certifications: true,
           },
         },
       },
@@ -369,7 +370,7 @@ export async function getProductById(id: string) {
 export async function getRelatedProducts(productId: string, limit = 8) {
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { category: true, companyId: true },
+    select: { categoryId: true, companyId: true },
   });
 
   if (!product) return [];
@@ -378,7 +379,7 @@ export async function getRelatedProducts(productId: string, limit = 8) {
     where: {
       id: { not: productId },
       OR: [
-        { category: product.category },
+        { categoryId: product.categoryId },
         { companyId: product.companyId },
       ],
     },
@@ -445,10 +446,10 @@ export async function getMarketplaceStats() {
     prisma.location.count(),
     prisma.company.count({ where: { sellerId: { not: null } } }),
     prisma.product.groupBy({
-      by: ['category'],
+      by: ['categoryId'],
       _count: true,
-      where: { category: { not: null } },
-      orderBy: { _count: { category: 'desc' } },
+      where: { categoryId: { not: null } },
+      orderBy: { _count: { categoryId: 'desc' } },
       take: 10,
     }),
     prisma.company.groupBy({

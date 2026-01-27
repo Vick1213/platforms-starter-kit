@@ -50,9 +50,9 @@ export async function POST(request: Request) {
             data: {
               name: company.name || existingCompany.name,
               description: company.description,
+              shortDescription: company.shortDescription,
               logo: company.logo,
               website: company.website,
-              industry: company.industry,
               country: company.country,
               city: company.city,
               address: company.address,
@@ -65,14 +65,16 @@ export async function POST(request: Request) {
           results.updated++;
         } else {
           // Create new company
+          const slug = company.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
           const newCompany = await prisma.company.create({
             data: {
               name: company.name,
+              slug,
               domain: company.domain,
               description: company.description,
+              shortDescription: company.shortDescription,
               logo: company.logo,
               website: company.website,
-              industry: company.industry,
               country: company.country,
               city: company.city,
               address: company.address,
