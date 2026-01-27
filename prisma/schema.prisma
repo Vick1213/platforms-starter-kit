@@ -71,6 +71,78 @@ enum PaymentMethod {
   TRADE_ASSURANCE
 }
 
+enum UserRole {
+  USER
+  SELLER
+  ADMIN
+}
+
+enum AuthProvider {
+  CREDENTIALS
+  GOOGLE
+  APPLE
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id              String    @id @default(cuid())
+  
+  email           String    @unique
+  name            String?
+  image           String?
+  
+  role            UserRole  @default(USER)
+  emailVerified   DateTime?
+  
+  // Relations
+  credentials     UserCredentials?
+  accounts        UserAccount[]
+  seller          Seller?
+  inquiries       Inquiry[]
+  reviews         SupplierReview[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([email])
+  @@index([role])
+}
+
+model UserCredentials {
+  id              String    @id @default(cuid())
+  
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  password        String
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model UserAccount {
+  id                String    @id @default(cuid())
+  
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  provider          AuthProvider
+  providerAccountId String?
+  
+  accessToken       String?   @db.Text
+  refreshToken      String?   @db.Text
+  tokenExpires      DateTime?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([provider, userId])
+  @@index([userId])
+}
+
 // ============================================
 // SUPPLIER / COMPANY
 // ============================================
@@ -537,6 +609,11 @@ model Inquiry {
   subject         String
   message         String   @db.Text
   
+  // Link to registered user (optional - guests can also inquire)
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Buyer info (filled from user or guest form)
   buyerName       String
   buyerEmail      String
   buyerPhone      String?
@@ -567,6 +644,7 @@ model Inquiry {
   updatedAt       DateTime @updatedAt
   
   @@index([companyId])
+  @@index([userId])
   @@index([status])
   @@index([buyerEmail])
   @@index([createdAt])
@@ -657,6 +735,11 @@ model SupplierReview {
   title           String?
   content         String?  @db.Text
   
+  // Link to registered user (optional)
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Reviewer info (filled from user or form)
   reviewerName    String
   reviewerCountry String?
   reviewerCompany String?
@@ -671,6 +754,7 @@ model SupplierReview {
   createdAt       DateTime @default(now())
   
   @@index([companyId])
+  @@index([userId])
   @@index([overallRating])
 }
 
@@ -682,35 +766,43 @@ model Seller {
   id              String   @id @default(cuid())
   
   userId          String   @unique
-  email           String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   businessName    String
-  subdomain       String   @unique
-  description     String?  @db.Text
+  businessEmail   String
+  businessPhone   String?
   
-  domain          String?  @unique
+  subdomain       String   @unique
+  customDomain    String?  @unique
+  description     String?  @db.Text
   
   logo            String?
   banner          String?
   
-  phone           String?
   address         String?
   
   status          String   @default("pending")
   verified        Boolean  @default(false)
   rating          Float    @default(0)
+  totalSales      Float    @default(0)
   
   plan            String   @default("free")
   planExpiresAt   DateTime?
   
+  // Link to Company profile (scraped data)
   company         Company?
+  
+  // Seller Settings (stored inline for simplicity)
+  currency        String   @default("USD")
+  returnPolicy    String?  @db.Text
+  autoApprove     Boolean  @default(false)
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   @@index([businessName])
   @@index([subdomain])
-  @@index([domain])
+  @@index([customDomain])
   @@index([status])
 }
 

@@ -1,7 +1,103 @@
+/**
+ * Database Layer with PostgreSQL (source of truth) + Redis (cache)
+ * 
+ * Pattern: Cache-aside
+ * - Reads: Check Redis cache first, fallback to PostgreSQL, then populate cache
+ * - Writes: Write to PostgreSQL first, then invalidate/update Redis cache
+ */
+
+import { PrismaClient, UserRole as PrismaUserRole } from '@prisma/client';
 import { redis } from './redis';
 import { UserRole } from './auth-config';
-import type { User, UserCredentials, Seller, SellerSettings, Product, Category, Order } from './types';
 import { hashSync, compareSync } from 'bcryptjs';
+
+// ============================================
+// PRISMA CLIENT (Singleton)
+// ============================================
+
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma || new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+});
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+// ============================================
+// CACHE CONFIGURATION
+// ============================================
+
+const CACHE_TTL = {
+  USER: 3600,           // 1 hour
+  USER_AUTH: 1800,      // 30 minutes (auth lookups)
+  SELLER: 3600,         // 1 hour
+  SUBDOMAIN: 86400,     // 24 hours
+  SEARCH: 300,          // 5 minutes
+};
+
+// Cache key builders
+const cacheKeys = {
+  user: (id: string) => `cache:user:${id}`,
+  userByEmail: (email: string) => `cache:user:email:${email.toLowerCase()}`,
+  userAuth: (email: string) => `cache:auth:${email.toLowerCase()}`,
+  seller: (id: string) => `cache:seller:${id}`,
+  sellerByUser: (userId: string) => `cache:seller:user:${userId}`,
+  sellerBySubdomain: (subdomain: string) => `cache:subdomain:${subdomain.toLowerCase()}`,
+  sellerByDomain: (domain: string) => `cache:domain:${domain.toLowerCase()}`,
+  storeCustomization: (sellerId: string) => `store:custom:${sellerId}`,
+};
+
+// ============================================
+// TYPE MAPPINGS
+// ============================================
+
+// Map Prisma UserRole enum to our UserRole enum
+function mapPrismaRole(role: PrismaUserRole): UserRole {
+  switch (role) {
+    case 'ADMIN': return UserRole.ADMIN;
+    case 'SELLER': return UserRole.SELLER;
+    default: return UserRole.USER;
+  }
+}
+
+function mapToUserRole(role: UserRole): PrismaUserRole {
+  switch (role) {
+    case UserRole.ADMIN: return 'ADMIN';
+    case UserRole.SELLER: return 'SELLER';
+    default: return 'USER';
+  }
+}
+
+// Simplified user type for app use
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  role: UserRole;
+  emailVerified: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AppSeller {
+  id: string;
+  userId: string;
+  businessName: string;
+  businessEmail: string;
+  businessPhone: string | null;
+  description: string | null;
+  logo: string | null;
+  banner: string | null;
+  subdomain: string;
+  customDomain: string | null;
+  verified: boolean;
+  status: string;
+  rating: number;
+  totalSales: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // ============================================
 // USER OPERATIONS
@@ -13,91 +109,172 @@ export async function createUser(data: {
   password?: string;
   image?: string | null;
   role?: UserRole;
-  provider?: string;
-}): Promise<User> {
-  const id = `user_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  const now = Date.now();
+  provider?: 'CREDENTIALS' | 'GOOGLE' | 'APPLE';
+}): Promise<AppUser> {
+  // Write to PostgreSQL
+  const user = await prisma.user.create({
+    data: {
+      email: data.email.toLowerCase(),
+      name: data.name,
+      image: data.image || null,
+      role: mapToUserRole(data.role || UserRole.USER),
+      // Create credentials if password provided
+      credentials: data.password ? {
+        create: {
+          password: hashSync(data.password, 12),
+        }
+      } : undefined,
+      // Create OAuth account if provider specified
+      accounts: data.provider && data.provider !== 'CREDENTIALS' ? {
+        create: {
+          provider: data.provider,
+        }
+      } : undefined,
+    },
+  });
 
-  const user: User = {
-    id,
-    email: data.email.toLowerCase(),
-    name: data.name,
-    image: data.image || null,
-    role: data.role || UserRole.USER,
-    emailVerified: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  // Store user
-  await redis.set(`user:${id}`, user);
-  await redis.set(`user:email:${data.email.toLowerCase()}`, id);
-
-  // If password provided, store credentials
-  if (data.password) {
-    const hashedPassword = hashSync(data.password, 12);
-    const credentials: UserCredentials = {
-      ...user,
-      password: hashedPassword,
-    };
-    await redis.set(`user:credentials:${id}`, credentials);
-  }
-
-  // Track OAuth provider if applicable
-  if (data.provider) {
-    await redis.set(`user:provider:${data.provider}:${data.email.toLowerCase()}`, id);
-  }
-
-  return user;
-}
-
-export async function getUserById(id: string): Promise<User | null> {
-  return redis.get<User>(`user:${id}`);
-}
-
-export async function getUserByEmail(email: string): Promise<User | null> {
-  const userId = await redis.get<string>(`user:email:${email.toLowerCase()}`);
-  if (!userId) return null;
-  return getUserById(userId);
-}
-
-export async function getUserCredentials(userId: string): Promise<UserCredentials | null> {
-  return redis.get<UserCredentials>(`user:credentials:${userId}`);
-}
-
-export async function verifyUserPassword(email: string, password: string): Promise<User | null> {
-  const user = await getUserByEmail(email);
-  if (!user) return null;
-
-  const credentials = await getUserCredentials(user.id);
-  if (!credentials) return null;
-
-  const isValid = compareSync(password, credentials.password);
-  return isValid ? user : null;
-}
-
-export async function updateUser(id: string, data: Partial<User>): Promise<User | null> {
-  const user = await getUserById(id);
-  if (!user) return null;
-
-  const updated: User = {
+  const appUser: AppUser = {
     ...user,
-    ...data,
-    updatedAt: Date.now(),
+    role: mapPrismaRole(user.role),
   };
 
-  await redis.set(`user:${id}`, updated);
-  return updated;
+  // Cache the user
+  await redis.set(cacheKeys.user(user.id), appUser, { ex: CACHE_TTL.USER });
+  await redis.set(cacheKeys.userByEmail(user.email), user.id, { ex: CACHE_TTL.USER });
+
+  return appUser;
 }
 
-export async function getUserByProvider(provider: string, email: string): Promise<User | null> {
-  const userId = await redis.get<string>(`user:provider:${provider}:${email.toLowerCase()}`);
-  if (!userId) return null;
-  return getUserById(userId);
+export async function getUserById(id: string): Promise<AppUser | null> {
+  // Check cache first
+  const cached = await redis.get<AppUser>(cacheKeys.user(id));
+  if (cached) return cached;
+
+  // Fetch from PostgreSQL
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) return null;
+
+  const appUser: AppUser = {
+    ...user,
+    role: mapPrismaRole(user.role),
+  };
+
+  // Populate cache
+  await redis.set(cacheKeys.user(id), appUser, { ex: CACHE_TTL.USER });
+  
+  return appUser;
+}
+
+export async function getUserByEmail(email: string): Promise<AppUser | null> {
+  const normalizedEmail = email.toLowerCase();
+  
+  // Check cache for user ID
+  const cachedId = await redis.get<string>(cacheKeys.userByEmail(normalizedEmail));
+  if (cachedId) {
+    return getUserById(cachedId);
+  }
+
+  // Fetch from PostgreSQL
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (!user) return null;
+
+  const appUser: AppUser = {
+    ...user,
+    role: mapPrismaRole(user.role),
+  };
+
+  // Populate cache
+  await redis.set(cacheKeys.user(user.id), appUser, { ex: CACHE_TTL.USER });
+  await redis.set(cacheKeys.userByEmail(normalizedEmail), user.id, { ex: CACHE_TTL.USER });
+  
+  return appUser;
+}
+
+export async function verifyUserPassword(email: string, password: string): Promise<AppUser | null> {
+  const normalizedEmail = email.toLowerCase();
+  
+  // Fetch user with credentials from PostgreSQL (always fresh for auth)
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    include: { credentials: true },
+  });
+  
+  if (!user || !user.credentials) return null;
+
+  const isValid = compareSync(password, user.credentials.password);
+  if (!isValid) return null;
+
+  return {
+    ...user,
+    role: mapPrismaRole(user.role),
+  };
+}
+
+export async function updateUser(id: string, data: Partial<{
+  name: string | null;
+  image: string | null;
+  role: UserRole;
+  emailVerified: Date | null;
+}>): Promise<AppUser | null> {
+  const updateData: any = { ...data };
+  if (data.role) {
+    updateData.role = mapToUserRole(data.role);
+  }
+
+  const user = await prisma.user.update({
+    where: { id },
+    data: updateData,
+  });
+
+  const appUser: AppUser = {
+    ...user,
+    role: mapPrismaRole(user.role),
+  };
+
+  // Invalidate and update cache
+  await redis.set(cacheKeys.user(id), appUser, { ex: CACHE_TTL.USER });
+  
+  return appUser;
+}
+
+export async function getUserByProvider(provider: string, email: string): Promise<AppUser | null> {
+  const normalizedEmail = email.toLowerCase();
+  
+  // Map string provider to enum
+  const providerEnum = provider.toUpperCase() as 'GOOGLE' | 'APPLE' | 'CREDENTIALS';
+  
+  const account = await prisma.userAccount.findFirst({
+    where: {
+      provider: providerEnum,
+      user: { email: normalizedEmail },
+    },
+    include: { user: true },
+  });
+
+  if (!account) return null;
+
+  return {
+    ...account.user,
+    role: mapPrismaRole(account.user.role),
+  };
 }
 
 export async function linkProviderToUser(userId: string, provider: string, email: string): Promise<void> {
-  await redis.set(`user:provider:${provider}:${email.toLowerCase()}`, userId);
+  const providerEnum = provider.toUpperCase() as 'GOOGLE' | 'APPLE' | 'CREDENTIALS';
+  
+  await prisma.userAccount.upsert({
+    where: {
+      provider_userId: {
+        provider: providerEnum,
+        userId,
+      },
+    },
+    update: {},
+    create: {
+      userId,
+      provider: providerEnum,
+    },
+  });
 }
 
 // ============================================
@@ -112,126 +289,225 @@ export async function createSeller(data: {
   description?: string;
   subdomain: string;
   customDomain?: string;
-}): Promise<Seller> {
-  const id = `seller_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  const now = Date.now();
+}): Promise<AppSeller> {
+  const seller = await prisma.seller.create({
+    data: {
+      userId: data.userId,
+      businessName: data.businessName,
+      businessEmail: data.businessEmail,
+      businessPhone: data.businessPhone || null,
+      description: data.description || null,
+      subdomain: data.subdomain.toLowerCase(),
+      customDomain: data.customDomain?.toLowerCase() || null,
+    },
+  });
 
-  const seller: Seller = {
-    id,
-    userId: data.userId,
-    businessName: data.businessName,
-    businessEmail: data.businessEmail,
-    businessPhone: data.businessPhone || null,
-    description: data.description || null,
-    logo: null,
-    banner: null,
-    subdomain: data.subdomain.toLowerCase(),
-    customDomain: data.customDomain || null,
-    verified: false,
-    status: 'pending',
-    rating: 0,
-    totalSales: 0,
-    createdAt: now,
-    updatedAt: now,
+  // Update user role to SELLER
+  await prisma.user.update({
+    where: { id: data.userId },
+    data: { role: 'SELLER' },
+  });
+
+  // Invalidate user cache (role changed)
+  await redis.del(cacheKeys.user(data.userId));
+
+  const appSeller: AppSeller = {
+    ...seller,
+    verified: seller.verified,
   };
 
-  // Store seller
-  await redis.set(`seller:${id}`, seller);
-  await redis.set(`seller:user:${data.userId}`, id);
-  await redis.set(`seller:subdomain:${data.subdomain.toLowerCase()}`, id);
+  // Cache seller data
+  await redis.set(cacheKeys.seller(seller.id), appSeller, { ex: CACHE_TTL.SELLER });
+  await redis.set(cacheKeys.sellerByUser(data.userId), seller.id, { ex: CACHE_TTL.SELLER });
+  await redis.set(cacheKeys.sellerBySubdomain(data.subdomain), seller.id, { ex: CACHE_TTL.SUBDOMAIN });
   
   if (data.customDomain) {
-    await redis.set(`seller:domain:${data.customDomain.toLowerCase()}`, id);
+    await redis.set(cacheKeys.sellerByDomain(data.customDomain), seller.id, { ex: CACHE_TTL.SUBDOMAIN });
   }
 
-  // Update user role
-  await updateUser(data.userId, { role: UserRole.SELLER });
-
-  // Create default settings
-  const settings: SellerSettings = {
-    sellerId: id,
-    currency: 'USD',
-    shippingZones: [],
-    returnPolicy: null,
-    paymentMethods: ['card'],
-    autoApproveOrders: false,
-  };
-  await redis.set(`seller:settings:${id}`, settings);
-
-  return seller;
+  return appSeller;
 }
 
-export async function getSellerById(id: string): Promise<Seller | null> {
-  return redis.get<Seller>(`seller:${id}`);
-}
+export async function getSellerById(id: string): Promise<AppSeller | null> {
+  // Check cache
+  const cached = await redis.get<AppSeller>(cacheKeys.seller(id));
+  if (cached) return cached;
 
-export async function getSellerByUserId(userId: string): Promise<Seller | null> {
-  const sellerId = await redis.get<string>(`seller:user:${userId}`);
-  if (!sellerId) return null;
-  return getSellerById(sellerId);
-}
-
-export async function getSellerBySubdomain(subdomain: string): Promise<Seller | null> {
-  const sellerId = await redis.get<string>(`seller:subdomain:${subdomain.toLowerCase()}`);
-  if (!sellerId) return null;
-  return getSellerById(sellerId);
-}
-
-export async function getSellerByCustomDomain(domain: string): Promise<Seller | null> {
-  const sellerId = await redis.get<string>(`seller:domain:${domain.toLowerCase()}`);
-  if (!sellerId) return null;
-  return getSellerById(sellerId);
-}
-
-export async function updateSeller(id: string, data: Partial<Seller>): Promise<Seller | null> {
-  const seller = await getSellerById(id);
+  // Fetch from PostgreSQL
+  const seller = await prisma.seller.findUnique({ where: { id } });
   if (!seller) return null;
 
-  const updated: Seller = {
-    ...seller,
-    ...data,
-    updatedAt: Date.now(),
-  };
+  const appSeller: AppSeller = { ...seller };
 
-  await redis.set(`seller:${id}`, updated);
-  return updated;
+  // Populate cache
+  await redis.set(cacheKeys.seller(id), appSeller, { ex: CACHE_TTL.SELLER });
+  
+  return appSeller;
 }
 
-export async function getAllSellers(): Promise<Seller[]> {
-  const keys = await redis.keys('seller:seller_*');
-  if (!keys.length) return [];
+export async function getSellerByUserId(userId: string): Promise<AppSeller | null> {
+  // Check cache for seller ID
+  const cachedId = await redis.get<string>(cacheKeys.sellerByUser(userId));
+  if (cachedId) {
+    return getSellerById(cachedId);
+  }
 
-  const sellers = await redis.mget<Seller>(...keys);
-  return sellers.filter((s): s is Seller => s !== null);
+  // Fetch from PostgreSQL
+  const seller = await prisma.seller.findUnique({ where: { userId } });
+  if (!seller) return null;
+
+  const appSeller: AppSeller = { ...seller };
+
+  // Populate cache
+  await redis.set(cacheKeys.seller(seller.id), appSeller, { ex: CACHE_TTL.SELLER });
+  await redis.set(cacheKeys.sellerByUser(userId), seller.id, { ex: CACHE_TTL.SELLER });
+  
+  return appSeller;
 }
 
-export async function getPendingSellers(): Promise<Seller[]> {
-  const sellers = await getAllSellers();
-  return sellers.filter(s => s.status === 'pending');
+export async function getSellerBySubdomain(subdomain: string): Promise<AppSeller | null> {
+  const normalizedSubdomain = subdomain.toLowerCase();
+  
+  // Check cache for seller ID
+  const cachedId = await redis.get<string>(cacheKeys.sellerBySubdomain(normalizedSubdomain));
+  if (cachedId) {
+    return getSellerById(cachedId);
+  }
+
+  // Fetch from PostgreSQL
+  const seller = await prisma.seller.findUnique({ where: { subdomain: normalizedSubdomain } });
+  if (!seller) return null;
+
+  const appSeller: AppSeller = { ...seller };
+
+  // Populate cache
+  await redis.set(cacheKeys.seller(seller.id), appSeller, { ex: CACHE_TTL.SELLER });
+  await redis.set(cacheKeys.sellerBySubdomain(normalizedSubdomain), seller.id, { ex: CACHE_TTL.SUBDOMAIN });
+  
+  return appSeller;
 }
 
-export async function approveSeller(id: string): Promise<Seller | null> {
+export async function getSellerByCustomDomain(domain: string): Promise<AppSeller | null> {
+  const normalizedDomain = domain.toLowerCase();
+  
+  // Check cache
+  const cachedId = await redis.get<string>(cacheKeys.sellerByDomain(normalizedDomain));
+  if (cachedId) {
+    return getSellerById(cachedId);
+  }
+
+  // Fetch from PostgreSQL
+  const seller = await prisma.seller.findFirst({ 
+    where: { customDomain: normalizedDomain } 
+  });
+  if (!seller) return null;
+
+  const appSeller: AppSeller = { ...seller };
+
+  // Populate cache
+  await redis.set(cacheKeys.seller(seller.id), appSeller, { ex: CACHE_TTL.SELLER });
+  await redis.set(cacheKeys.sellerByDomain(normalizedDomain), seller.id, { ex: CACHE_TTL.SUBDOMAIN });
+  
+  return appSeller;
+}
+
+export async function updateSeller(id: string, data: Partial<AppSeller>): Promise<AppSeller | null> {
+  // Remove fields that shouldn't be updated directly
+  const { id: _, odId, createdAt, updatedAt, ...updateData } = data as any;
+
+  const seller = await prisma.seller.update({
+    where: { id },
+    data: updateData,
+  });
+
+  const appSeller: AppSeller = { ...seller };
+
+  // Invalidate and update cache
+  await redis.set(cacheKeys.seller(id), appSeller, { ex: CACHE_TTL.SELLER });
+  
+  return appSeller;
+}
+
+export async function getAllSellers(): Promise<AppSeller[]> {
+  const sellers = await prisma.seller.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  
+  return sellers.map((seller) => ({ ...seller }));
+}
+
+export async function getPendingSellers(): Promise<AppSeller[]> {
+  const sellers = await prisma.seller.findMany({
+    where: { status: 'pending' },
+    orderBy: { createdAt: 'desc' },
+  });
+  
+  return sellers.map((seller) => ({ ...seller }));
+}
+
+export async function approveSeller(id: string): Promise<AppSeller | null> {
   return updateSeller(id, { status: 'approved', verified: true });
+}
+
+// ============================================
+// STORE CUSTOMIZATION (Redis-only - high read, low write)
+// ============================================
+
+export interface StoreCustomization {
+  primaryColor: string;
+  accentColor: string;
+  headerStyle: 'minimal' | 'standard' | 'bold';
+  showBanner: boolean;
+  bannerText: string;
+  socialLinks: {
+    website: string;
+    facebook: string;
+    instagram: string;
+    linkedin: string;
+    whatsapp: string;
+  };
+  contactInfo: {
+    email: string;
+    phone: string;
+    address: string;
+  };
+  aboutUs: string;
+  policies: {
+    shipping: string;
+    returns: string;
+    privacy: string;
+  };
+}
+
+export async function getStoreCustomization(sellerId: string): Promise<StoreCustomization | null> {
+  return redis.get<StoreCustomization>(cacheKeys.storeCustomization(sellerId));
+}
+
+export async function setStoreCustomization(sellerId: string, data: StoreCustomization): Promise<void> {
+  await redis.set(cacheKeys.storeCustomization(sellerId), data);
 }
 
 // ============================================
 // ADMIN OPERATIONS
 // ============================================
 
-export async function getAllUsers(): Promise<User[]> {
-  const keys = await redis.keys('user:user_*');
-  if (!keys.length) return [];
-
-  const users = await redis.mget<User>(...keys);
-  return users.filter((u): u is User => u !== null);
+export async function getAllUsers(): Promise<AppUser[]> {
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  
+  return users.map((user) => ({
+    ...user,
+    role: mapPrismaRole(user.role),
+  }));
 }
 
-export async function setUserRole(userId: string, role: UserRole): Promise<User | null> {
+export async function setUserRole(userId: string, role: UserRole): Promise<AppUser | null> {
   return updateUser(userId, { role });
 }
 
 // ============================================
-// SUBDOMAIN OPERATIONS (Updated for sellers)
+// SUBDOMAIN OPERATIONS
 // ============================================
 
 export async function isSubdomainAvailable(subdomain: string): Promise<boolean> {
@@ -241,13 +517,49 @@ export async function isSubdomainAvailable(subdomain: string): Promise<boolean> 
   const { isReservedSubdomain } = await import('./auth-config');
   if (isReservedSubdomain(sanitized)) return false;
 
-  // Check if already taken by a seller
-  const existingSeller = await redis.get(`seller:subdomain:${sanitized}`);
-  if (existingSeller) return false;
+  // Check if already taken by a seller (check DB directly for accuracy)
+  const existingSeller = await prisma.seller.findUnique({
+    where: { subdomain: sanitized },
+    select: { id: true },
+  });
+  
+  return !existingSeller;
+}
 
-  // Check legacy subdomain system
-  const existingSubdomain = await redis.get(`subdomain:${sanitized}`);
-  if (existingSubdomain) return false;
+// ============================================
+// CACHE MANAGEMENT
+// ============================================
 
-  return true;
+export async function invalidateUserCache(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (user) {
+    await redis.del(cacheKeys.user(userId));
+    await redis.del(cacheKeys.userByEmail(user.email));
+  }
+}
+
+export async function invalidateSellerCache(sellerId: string): Promise<void> {
+  const seller = await prisma.seller.findUnique({ where: { id: sellerId } });
+  if (seller) {
+    await redis.del(cacheKeys.seller(sellerId));
+    await redis.del(cacheKeys.sellerByUser(seller.userId));
+    await redis.del(cacheKeys.sellerBySubdomain(seller.subdomain));
+    if (seller.customDomain) {
+      await redis.del(cacheKeys.sellerByDomain(seller.customDomain));
+    }
+  }
+}
+
+// ============================================
+// SEARCH CACHING
+// ============================================
+
+export async function cacheSearchResults(query: string, results: any[], type: 'products' | 'companies'): Promise<void> {
+  const key = `cache:search:${type}:${Buffer.from(query).toString('base64')}`;
+  await redis.set(key, results, { ex: CACHE_TTL.SEARCH });
+}
+
+export async function getCachedSearchResults(query: string, type: 'products' | 'companies'): Promise<any[] | null> {
+  const key = `cache:search:${type}:${Buffer.from(query).toString('base64')}`;
+  return redis.get<any[]>(key);
 }

@@ -40,7 +40,7 @@ export async function PATCH(
     }
 
     // Determine new status
-    let newStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
+    let newStatus: string;
     let verified = seller.verified;
 
     switch (action) {

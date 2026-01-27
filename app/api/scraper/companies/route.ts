@@ -90,7 +90,7 @@ export async function POST(request: Request) {
             const seller = await prisma.seller.findFirst({
               where: {
                 OR: [
-                  { domain: company.domain },
+                  { customDomain: company.domain },
                   { businessName: { equals: company.name, mode: 'insensitive' } },
                 ],
               },

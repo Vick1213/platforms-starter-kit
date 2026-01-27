@@ -90,13 +90,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return true;
         }
 
+        // Map provider name to our enum
+        const providerType = account.provider.toUpperCase() as 'GOOGLE' | 'APPLE' | 'CREDENTIALS';
+
         // Create new user
         const newUser = await createUser({
           email: user.email,
           name: user.name || null,
           image: user.image || null,
           role: UserRole.USER,
-          provider: account.provider,
+          provider: providerType,
         });
 
         user.id = newUser.id;

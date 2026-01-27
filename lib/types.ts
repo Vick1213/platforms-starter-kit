@@ -1,6 +1,6 @@
 import { UserRole } from './auth-config';
 
-// User types
+// User types - Now using Date instead of number for timestamps (matches PostgreSQL)
 export interface User {
   id: string;
   email: string;
@@ -8,15 +8,15 @@ export interface User {
   image: string | null;
   role: UserRole;
   emailVerified: Date | null;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface UserCredentials extends User {
   password: string;
 }
 
-// Seller/Store types
+// Seller/Store types - Now using Date and string for status
 export interface Seller {
   id: string;
   userId: string;
@@ -27,13 +27,13 @@ export interface Seller {
   logo: string | null;
   banner: string | null;
   subdomain: string;
-  customDomain: string | null; // For manufacturers with existing websites
+  customDomain: string | null;
   verified: boolean;
-  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  status: string; // 'pending' | 'approved' | 'rejected' | 'suspended'
   rating: number;
   totalSales: number;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface SellerSettings {
