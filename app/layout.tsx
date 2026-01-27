@@ -11,7 +11,11 @@ const geistSans = Geist({
 
 export const metadata: Metadata = {
   title: 'Supply Me - Connect with Asian Manufacturers',
-  description: 'Your B2B platform to discover manufacturers in Asia, check tariffs, manage supply chains, and get transport quotes for your imports.'
+  description: 'Your B2B platform to discover manufacturers in Asia, check tariffs, manage supply chains, and get transport quotes for your imports.',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-icon.png',
+  },
 };
 
 export default function RootLayout({
