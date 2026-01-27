@@ -11,6 +11,10 @@ function extractSubdomain(request: NextRequest): string | null {
   const host = request.headers.get('host') || '';
   const hostname = host.split(':')[0];
 
+  console.log('[Middleware] URL:', url);
+  console.log('[Middleware] Host:', host);
+  console.log('[Middleware] Hostname:', hostname);
+
   // Local development environment
   if (url.includes('localhost') || url.includes('127.0.0.1')) {
     // Try to extract subdomain from the full URL
@@ -31,8 +35,10 @@ function extractSubdomain(request: NextRequest): string | null {
   // Format: subdomain.project-name.vercel.app
   if (hostname.endsWith('.vercel.app')) {
     const parts = hostname.split('.');
-    // parts = ['subdomain', 'project-name', 'vercel', 'app']
-    // or ['project-name', 'vercel', 'app'] (no subdomain)
+    console.log('[Middleware] Vercel parts:', parts, 'length:', parts.length);
+    
+    // parts for main domain = ['platforms-starter-kit-xi-rouge', 'vercel', 'app'] = 3 parts
+    // parts for subdomain = ['admin-fe7b9bce29ac', 'platforms-starter-kit-xi-rouge', 'vercel', 'app'] = 4 parts
     
     // Handle preview deployment URLs (tenant---branch-name.vercel.app)
     if (hostname.includes('---')) {
@@ -42,12 +48,14 @@ function extractSubdomain(request: NextRequest): string | null {
     }
     
     // Regular Vercel deployment: subdomain.project-name.vercel.app
-    // If there are 4+ parts, first part is subdomain
+    // Main domain has 3 parts, subdomain adds 1 more = 4 parts
     if (parts.length >= 4) {
-      return parts[0];
+      const subdomain = parts[0];
+      console.log('[Middleware] Extracted subdomain:', subdomain);
+      return subdomain;
     }
     
-    // No subdomain (just project-name.vercel.app)
+    // No subdomain (just project-name.vercel.app = 3 parts)
     return null;
   }
 
