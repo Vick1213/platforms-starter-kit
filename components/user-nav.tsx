@@ -4,6 +4,7 @@ import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { Store } from 'lucide-react';
 import type { UserRole } from '@/lib/auth-config';
+import { getSellerPortalUrl } from '@/lib/utils';
 
 type UserNavProps = {
   user: {
@@ -31,9 +32,10 @@ export function UserNav({ user }: UserNavProps) {
     <div className="flex items-center gap-4">
       <span className="text-gray-600">Hi, {user.name?.split(' ')[0] || 'User'}</span>
       {user.role === 'SELLER' && (
-        <Link href="/seller" className="text-orange-600 hover:underline font-medium">
-          Seller Dashboard
-        </Link>
+        <a href={getSellerPortalUrl()} className="text-orange-600 hover:underline font-medium flex items-center gap-1">
+          <Store className="w-4 h-4" />
+          My Store
+        </a>
       )}
       <button 
         onClick={() => signOut({ callbackUrl: '/' })}

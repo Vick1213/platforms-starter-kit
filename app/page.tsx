@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { getAllSellers } from '@/lib/db';
-import { rootDomain, buildSubdomainUrl, isVercelPreview } from '@/lib/utils';
+import { rootDomain, buildSubdomainUrl, isVercelPreview, getSellerPortalUrl } from '@/lib/utils';
 import { 
   ShoppingBag, Search, User, ShoppingCart, ChevronRight, 
   Store, TrendingUp, Shield, Truck, Star, ArrowRight,
@@ -38,10 +38,10 @@ export default async function HomePage() {
           {/* Top Bar */}
           <div className="flex items-center justify-between py-2 text-sm border-b">
             <div className="flex items-center gap-6 text-gray-600">
-              <Link href="/auth/seller-register" className="hover:text-orange-600 flex items-center gap-1">
+              <a href={getSellerPortalUrl()} className="hover:text-orange-600 flex items-center gap-1">
                 <Store className="w-4 h-4" />
                 Sell on MarketPlace
-              </Link>
+              </a>
               <span className="hidden md:inline">Download App</span>
             </div>
             <div className="flex items-center gap-4">
@@ -271,12 +271,12 @@ export default async function HomePage() {
             Join thousands of successful sellers on MarketPlace. Set up your store in minutes and reach millions of customers worldwide.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/auth/seller-register">
+            <a href={getSellerPortalUrl()}>
               <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 font-semibold">
                 <Store className="w-5 h-5 mr-2" />
                 Open Your Store
               </Button>
-            </Link>
+            </a>
             <Link href="/how-it-works">
               <Button size="lg" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800">
                 Learn More
@@ -313,10 +313,10 @@ export default async function HomePage() {
             <div>
               <h4 className="font-semibold text-gray-900 mb-4">Sell</h4>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><Link href="/auth/seller-register" className="hover:text-orange-600">Become a Seller</Link></li>
-                <li><Link href="/seller/how-it-works" className="hover:text-orange-600">How It Works</Link></li>
-                <li><Link href="/seller/pricing" className="hover:text-orange-600">Pricing</Link></li>
-                <li><Link href="/seller/success-stories" className="hover:text-orange-600">Success Stories</Link></li>
+                <li><a href={getSellerPortalUrl()} className="hover:text-orange-600">Become a Seller</a></li>
+                <li><a href={`${getSellerPortalUrl()}/how-it-works`} className="hover:text-orange-600">How It Works</a></li>
+                <li><a href={`${getSellerPortalUrl()}/pricing`} className="hover:text-orange-600">Pricing</a></li>
+                <li><a href={`${getSellerPortalUrl()}/success-stories`} className="hover:text-orange-600">Success Stories</a></li>
               </ul>
             </div>
             <div>

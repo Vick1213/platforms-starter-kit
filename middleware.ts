@@ -107,22 +107,24 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
 
-    // SELLER PORTAL
+    // SELLER PORTAL (seller.supplyme.asia)
+    // This is where sellers register and manage their stores
     if (isSellerSubdomain(subdomain)) {
-      // Rewrite root to seller dashboard
+      // Rewrite root to seller portal landing page
+      // The page itself will redirect to /seller if user is a seller
       if (pathname === '/') {
-        return NextResponse.rewrite(new URL('/seller', request.url), {
+        return NextResponse.rewrite(new URL('/seller-portal', request.url), {
           headers: requestHeaders,
         });
       }
-      // Allow seller and auth routes
+      // Allow seller dashboard, auth, and seller-portal routes
       if (pathname.startsWith('/seller') || pathname.startsWith('/auth')) {
         return NextResponse.next({
           request: { headers: requestHeaders },
         });
       }
-      // Redirect other routes to seller dashboard
-      return NextResponse.redirect(new URL('/seller', request.url));
+      // Redirect other routes to seller portal
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
     // STORE SUBDOMAIN (customer-facing store pages)

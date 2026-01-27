@@ -52,6 +52,16 @@ export function buildSubdomainUrl(subdomain: string): string {
   return `${protocol}://${subdomain}.${rootDomain}`;
 }
 
+// Get the seller portal URL
+export function getSellerPortalUrl(): string {
+  return buildSubdomainUrl('seller');
+}
+
+// Get the main site URL
+export function getMainSiteUrl(): string {
+  return `${protocol}://${rootDomain}`;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
