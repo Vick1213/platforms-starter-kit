@@ -57,7 +57,6 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
   };
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const router = useRouter();
 
   // Helper to show a notification
   const showNotification = (type: 'success' | 'error', message: string) => {
