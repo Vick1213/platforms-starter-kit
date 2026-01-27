@@ -12,16 +12,12 @@ export default async function SellerPage() {
     redirect('/auth/login?callbackUrl=/seller');
   }
 
-  // Check if user has seller role
-  if (session.user.role !== UserRole.SELLER && session.user.role !== UserRole.ADMIN) {
-    redirect('/auth/seller-register');
-  }
-
   // Get seller data
   const seller = await getSellerByUserId(session.user.id);
 
+  // If user doesn't have a seller profile, redirect to become seller page
   if (!seller) {
-    redirect('/auth/seller-register');
+    redirect('/seller/become');
   }
 
   return <SellerDashboard seller={seller} user={session.user} />;

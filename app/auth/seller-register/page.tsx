@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,16 @@ import {
 import { rootDomain } from '@/lib/utils';
 
 export default function SellerRegisterPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
+
+  // If user is already signed in, redirect to become seller page
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      router.push('/seller/become');
+    }
+  }, [status, session, router]);
+
   const [step, setStep] = useState<'account' | 'business'>('account');
   const [formData, setFormData] = useState({
     // Account details
@@ -36,6 +45,27 @@ export default function SellerRegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null);
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
+
+  // Show loading while checking session
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+      </div>
+    );
+  }
+
+  // If authenticated, show loading (will redirect)
+  if (status === 'authenticated') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-4" />
+          <p className="text-gray-600">Redirecting to store setup...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

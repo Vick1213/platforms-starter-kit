@@ -1,7 +1,6 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getSellerByUserId } from '@/lib/db';
-import { UserRole } from '@/lib/auth-config';
 import { getMainSiteUrl } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -18,13 +17,13 @@ export const metadata = {
 export default async function SellerPortalPage() {
   const session = await auth();
 
-  // If user is logged in and is a seller, redirect to dashboard
-  if (session?.user) {
-    if (session.user.role === UserRole.SELLER) {
-      const seller = await getSellerByUserId(session.user.id);
-      if (seller) {
-        redirect('/seller');
-      }
+  // If user is logged in, check if they already have a seller profile
+  let existingSeller = null;
+  if (session?.user?.id) {
+    existingSeller = await getSellerByUserId(session.user.id);
+    // If they have a seller profile, redirect to dashboard
+    if (existingSeller) {
+      redirect('/seller');
     }
   }
 
@@ -101,10 +100,10 @@ export default async function SellerPortalPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             {session?.user ? (
-              <Link href="/auth/seller-register">
+              <Link href="/seller/become">
                 <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 font-semibold text-lg px-8">
                   <Factory className="w-5 h-5 mr-2" />
-                  Complete Registration
+                  Set Up Your Store
                 </Button>
               </Link>
             ) : (
