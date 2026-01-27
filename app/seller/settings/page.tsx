@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FileUpload } from '@/components/ui/file-upload';
 import { 
   ShoppingBag, ArrowLeft, Save, Store, Palette, Globe, 
   Bell, Shield, CreditCard, Truck, Image as ImageIcon,
-  Check, AlertCircle, Loader2, ExternalLink, Copy
+  Check, AlertCircle, Loader2, ExternalLink, Copy, Upload, Trash2
 } from 'lucide-react';
 import { buildSubdomainUrl, rootDomain, isVercelPreview } from '@/lib/utils';
 
@@ -367,32 +368,68 @@ export default function SellerSettingsPage() {
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="logo">Logo URL</Label>
-                      <Input
-                        id="logo"
-                        value={logo}
-                        onChange={(e) => setLogo(e.target.value)}
-                        placeholder="https://example.com/logo.png"
-                      />
-                      {logo && (
-                        <div className="mt-2 w-20 h-20 border rounded-lg overflow-hidden bg-gray-50">
-                          <img src={logo} alt="Logo preview" className="w-full h-full object-contain" />
+                      <Label>Store Logo</Label>
+                      {logo ? (
+                        <div className="space-y-2">
+                          <div className="relative w-24 h-24 border rounded-lg overflow-hidden bg-gray-50 group">
+                            <img src={logo} alt="Logo preview" className="w-full h-full object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => setLogo('')}
+                              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                            >
+                              <Trash2 className="w-5 h-5 text-white" />
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-500">Click image to remove</p>
                         </div>
+                      ) : (
+                        <FileUpload
+                          type="store-logo"
+                          accept="image"
+                          buttonText="Upload Logo"
+                          showPreview={false}
+                          onUpload={(result) => {
+                            if (result.success && result.url) {
+                              setLogo(result.url);
+                            }
+                          }}
+                          onError={(error) => setMessage({ type: 'error', text: error })}
+                        />
                       )}
+                      <p className="text-xs text-gray-500">Recommended: 200x200px, PNG or JPG</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="banner">Banner Image URL</Label>
-                      <Input
-                        id="banner"
-                        value={banner}
-                        onChange={(e) => setBanner(e.target.value)}
-                        placeholder="https://example.com/banner.jpg"
-                      />
-                      {banner && (
-                        <div className="mt-2 w-full h-24 border rounded-lg overflow-hidden bg-gray-50">
-                          <img src={banner} alt="Banner preview" className="w-full h-full object-cover" />
+                      <Label>Store Banner</Label>
+                      {banner ? (
+                        <div className="space-y-2">
+                          <div className="relative w-full h-32 border rounded-lg overflow-hidden bg-gray-50 group">
+                            <img src={banner} alt="Banner preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setBanner('')}
+                              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                            >
+                              <Trash2 className="w-5 h-5 text-white" />
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-500">Click image to remove</p>
                         </div>
+                      ) : (
+                        <FileUpload
+                          type="store-banner"
+                          accept="image"
+                          buttonText="Upload Banner"
+                          showPreview={false}
+                          onUpload={(result) => {
+                            if (result.success && result.url) {
+                              setBanner(result.url);
+                            }
+                          }}
+                          onError={(error) => setMessage({ type: 'error', text: error })}
+                        />
                       )}
+                      <p className="text-xs text-gray-500">Recommended: 1200x400px, PNG or JPG</p>
                     </div>
                   </div>
 
