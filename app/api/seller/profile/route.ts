@@ -19,7 +19,7 @@ export async function GET() {
     }
 
     // Get customization data
-    const customization = await redis.get(`seller:customization:${seller.id}`);
+    const customization = await redis.get(`store:custom:${seller.id}`);
 
     return NextResponse.json({
       seller,

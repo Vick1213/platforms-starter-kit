@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getSellerBySubdomain, getActiveProductsBySellerId } from '@/lib/db';
+import { getSellerBySubdomain, getActiveProductsBySellerId, getStoreCustomization } from '@/lib/db';
 import { protocol, rootDomain, getMainSiteUrl, getSellerPortalUrl } from '@/lib/utils';
-import { ShoppingBag, Star, Shield, Truck, MessageCircle } from 'lucide-react';
+import { ShoppingBag, Star, Shield, Truck, MessageCircle, Globe, Facebook, Instagram, Linkedin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StoreOwnerCheck } from '@/components/store-owner-check';
 import { SessionProvider } from 'next-auth/react';
@@ -99,10 +99,31 @@ export default async function StorePage({
 
   // Fetch products for the approved seller
   const products = await getActiveProductsBySellerId(seller.id);
+  
+  // Fetch store customization
+  const customization = await getStoreCustomization(seller.id);
+  
+  // Default colors if no customization
+  const primaryColor = customization?.primaryColor || '#f97316';
+  const accentColor = customization?.accentColor || '#fbbf24';
 
   return (
     <SessionProvider>
       <div className="min-h-screen bg-gray-50 pb-16">
+        {/* Custom CSS Variables for theming */}
+        <style>{`
+          :root {
+            --store-primary: ${primaryColor};
+            --store-accent: ${accentColor};
+          }
+          .store-primary-bg { background-color: ${primaryColor}; }
+          .store-primary-text { color: ${primaryColor}; }
+          .store-accent-bg { background-color: ${accentColor}; }
+          .store-gradient { background: linear-gradient(to right, ${primaryColor}, ${accentColor}); }
+          .store-primary-hover:hover { color: ${primaryColor}; }
+          .store-ring-focus:focus { --tw-ring-color: ${primaryColor}; }
+        `}</style>
+        
         {/* Store Owner Toolbar - only shows if logged-in user owns this store */}
         <StoreOwnerCheck
           sellerUserId={seller.userId}
@@ -181,7 +202,7 @@ export default async function StorePage({
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Contact
               </Button>
-              <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600">
+              <Button className="store-gradient text-white">
                 <ShoppingBag className="w-4 h-4 mr-2" />
                 Cart (0)
               </Button>
@@ -190,16 +211,23 @@ export default async function StorePage({
 
           {/* Navigation */}
           <nav className="flex items-center gap-6 py-3 text-sm">
-            <Link href="/" className="text-orange-600 font-medium">Home</Link>
-            <Link href="/products" className="text-gray-600 hover:text-orange-600">All Products</Link>
-            <Link href="/categories" className="text-gray-600 hover:text-orange-600">Categories</Link>
-            <Link href="/about" className="text-gray-600 hover:text-orange-600">About Us</Link>
+            <Link href="/" className="store-primary-text font-medium">Home</Link>
+            <Link href="/products" className="text-gray-600 store-primary-hover">All Products</Link>
+            <Link href="/categories" className="text-gray-600 store-primary-hover">Categories</Link>
+            <Link href="/about" className="text-gray-600 store-primary-hover">About Us</Link>
           </nav>
         </div>
       </header>
 
+      {/* Announcement Banner */}
+      {customization?.showBanner && customization?.bannerText && (
+        <div className="store-gradient text-white text-center py-2 text-sm">
+          {customization.bannerText}
+        </div>
+      )}
+
       {/* Hero Banner */}
-      <section className="relative bg-gradient-to-r from-orange-500 to-amber-500">
+      <section className="relative store-gradient">
         {seller.banner ? (
           <img src={seller.banner} alt="Store Banner" className="w-full h-64 object-cover" />
         ) : (
@@ -284,10 +312,10 @@ export default async function StorePage({
                     )}
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-1 truncate group-hover:text-orange-600">
+                    <h3 className="font-semibold text-gray-900 mb-1 truncate store-primary-hover">
                       {product.name}
                     </h3>
-                    <p className="text-orange-600 font-bold">
+                    <p className="store-primary-text font-bold">
                       {product.minPrice === product.maxPrice 
                         ? `$${product.minPrice.toFixed(2)}`
                         : `$${product.minPrice.toFixed(2)} - $${product.maxPrice.toFixed(2)}`
@@ -315,17 +343,113 @@ export default async function StorePage({
 
       {/* Footer */}
       <footer className="bg-white border-t mt-12">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4 text-white" />
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            {/* Store Info */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                {seller.logo ? (
+                  <img src={seller.logo} alt={seller.businessName} className="w-10 h-10 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-10 h-10 store-gradient rounded-lg flex items-center justify-center">
+                    <ShoppingBag className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                <span className="font-semibold text-gray-900">{seller.businessName}</span>
               </div>
-              <span className="font-semibold text-gray-900">{seller.businessName}</span>
+              <p className="text-sm text-gray-600 mb-4">
+                {customization?.aboutUs || seller.description || 'Quality products from a trusted supplier.'}
+              </p>
+              
+              {/* Social Links */}
+              {customization?.socialLinks && (
+                <div className="flex items-center gap-3">
+                  {customization.socialLinks.website && (
+                    <a href={customization.socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600">
+                      <Globe className="w-5 h-5" />
+                    </a>
+                  )}
+                  {customization.socialLinks.facebook && (
+                    <a href={customization.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600">
+                      <Facebook className="w-5 h-5" />
+                    </a>
+                  )}
+                  {customization.socialLinks.instagram && (
+                    <a href={customization.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600">
+                      <Instagram className="w-5 h-5" />
+                    </a>
+                  )}
+                  {customization.socialLinks.linkedin && (
+                    <a href={customization.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-600">
+                      <Linkedin className="w-5 h-5" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
+            
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li><Link href="/products" className="store-primary-hover">All Products</Link></li>
+                <li><Link href="/categories" className="store-primary-hover">Categories</Link></li>
+                <li><Link href="/about" className="store-primary-hover">About Us</Link></li>
+              </ul>
+            </div>
+            
+            {/* Contact Info */}
+            {customization?.contactInfo && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-4">Contact Us</h4>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  {customization.contactInfo.email && (
+                    <li>
+                      <a href={`mailto:${customization.contactInfo.email}`} className="store-primary-hover">
+                        {customization.contactInfo.email}
+                      </a>
+                    </li>
+                  )}
+                  {customization.contactInfo.phone && (
+                    <li>
+                      <a href={`tel:${customization.contactInfo.phone}`} className="store-primary-hover">
+                        {customization.contactInfo.phone}
+                      </a>
+                    </li>
+                  )}
+                  {customization.contactInfo.address && (
+                    <li>{customization.contactInfo.address}</li>
+                  )}
+                </ul>
+              </div>
+            )}
+            
+            {/* Policies */}
+            {customization?.policies && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-4">Policies</h4>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  {customization.policies.shipping && (
+                    <li><Link href="/policies/shipping" className="store-primary-hover">Shipping Policy</Link></li>
+                  )}
+                  {customization.policies.returns && (
+                    <li><Link href="/policies/returns" className="store-primary-hover">Return Policy</Link></li>
+                  )}
+                  {customization.policies.privacy && (
+                    <li><Link href="/policies/privacy" className="store-primary-hover">Privacy Policy</Link></li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          <div className="border-t pt-8 flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              © {new Date().getFullYear()} {seller.businessName}. All rights reserved.
+            </p>
             <p className="text-sm text-gray-500">
               Powered by{' '}
-              <Link href={`${protocol}://${rootDomain}`} className="text-orange-600 hover:underline">
+              <Link href={`${protocol}://${rootDomain}`} className="store-primary-text hover:underline">
                 Supply Me
               </Link>
             </p>

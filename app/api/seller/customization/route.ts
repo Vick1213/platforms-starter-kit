@@ -45,7 +45,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
 
-    const customization = await redis.get<StoreCustomization>(`seller:customization:${seller.id}`);
+    const customization = await redis.get<StoreCustomization>(`store:custom:${seller.id}`);
 
     return NextResponse.json({
       customization: customization || null,
@@ -92,7 +92,7 @@ export async function PUT(request: Request) {
     }
 
     // Save customization
-    await redis.set(`seller:customization:${seller.id}`, customization);
+    await redis.set(`store:custom:${seller.id}`, customization);
 
     return NextResponse.json({
       success: true,
