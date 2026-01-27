@@ -1,53 +1,60 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { rootDomain, isVercelPreview } from '@/lib/utils';
+import { rootDomain, isVercelPreview, isCustomDomain } from '@/lib/utils';
 import { 
   isAdminSubdomain, 
   isSellerSubdomain, 
   getPortalType 
 } from '@/lib/auth-config';
 
+/**
+ * Extract subdomain from request hostname
+ * 
+ * Supports:
+ * 1. Local development: subdomain.localhost:3000
+ * 2. Vercel preview: subdomain---project.vercel.app (--- prefix syntax)
+ * 3. Custom domain: subdomain.supplyme.asia (real wildcards with Vercel nameservers)
+ */
 function extractSubdomain(request: NextRequest): string | null {
   const url = request.url;
   const host = request.headers.get('host') || '';
-  const hostname = host.split(':')[0];
+  const hostname = host.split(':')[0].toLowerCase();
 
   console.log('[Middleware] URL:', url);
   console.log('[Middleware] Host:', host);
   console.log('[Middleware] Hostname:', hostname);
+  console.log('[Middleware] Root Domain:', rootDomain);
+  console.log('[Middleware] Is Custom Domain:', isCustomDomain);
+  console.log('[Middleware] Is Vercel Preview:', isVercelPreview);
 
-  // Local development environment
-  if (url.includes('localhost') || url.includes('127.0.0.1')) {
-    // Try to extract subdomain from the full URL
+  // ============================================
+  // 1. LOCAL DEVELOPMENT
+  // ============================================
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    // Try to extract subdomain from localhost URL
     const fullUrlMatch = url.match(/http:\/\/([^.]+)\.localhost/);
     if (fullUrlMatch && fullUrlMatch[1]) {
+      console.log('[Middleware] Local subdomain found:', fullUrlMatch[1]);
       return fullUrlMatch[1];
     }
 
     // Fallback to host header approach
     if (hostname.includes('.localhost')) {
-      return hostname.split('.')[0];
+      const subdomain = hostname.split('.')[0];
+      console.log('[Middleware] Local subdomain from host:', subdomain);
+      return subdomain;
     }
 
+    console.log('[Middleware] Local - no subdomain');
     return null;
   }
 
   // ============================================
-  // VERCEL PREVIEW URL PREFIX SYNTAX
+  // 2. VERCEL PREVIEW (*.vercel.app, *.vercel.dev)
   // ============================================
-  // Vercel does NOT support wildcard subdomains on *.vercel.app
-  // Instead, use the "---" prefix syntax:
-  //   {tenant}---{preview-url}
-  // 
-  // Example:
-  //   admin-fe7b9bce29ac---platforms-starter-kit-xi-rouge.vercel.app
-  //   laptops---platforms-starter-kit-xi-rouge.vercel.app
-  //
-  // This routes to the same deployment but passes the full hostname
-  // to our code, allowing us to extract the tenant prefix.
-  // ============================================
-  
+  // Wildcard subdomains DON'T work on *.vercel.app
+  // Use "---" prefix syntax instead (requires paid Vercel plan)
   if (hostname.includes('.vercel.app') || hostname.includes('.vercel.dev')) {
-    // Check for "---" prefix syntax (Vercel's multi-tenant preview URL pattern)
+    // Check for "---" prefix syntax
     if (hostname.includes('---')) {
       const firstPart = hostname.split('.')[0];
       const tenantParts = firstPart.split('---');
@@ -55,21 +62,40 @@ function extractSubdomain(request: NextRequest): string | null {
       return tenantParts.length > 0 ? tenantParts[0] : null;
     }
     
-    // No prefix = main domain, no subdomain
-    console.log('[Middleware] No --- prefix found, this is the main domain');
+    console.log('[Middleware] Vercel preview - no --- prefix, main domain');
     return null;
   }
 
-  // Production environment with custom domain
-  const rootDomainFormatted = rootDomain.split(':')[0];
+  // ============================================
+  // 3. CUSTOM DOMAIN (supplyme.asia)
+  // ============================================
+  // With custom domain + wildcard (*.supplyme.asia) configured in Vercel,
+  // real subdomains work: seller.supplyme.asia, admin-xxx.supplyme.asia
+  // 
+  // Requirements:
+  // - Nameservers pointed to ns1.vercel-dns.com, ns2.vercel-dns.com
+  // - Both supplyme.asia AND *.supplyme.asia added in Project Settings > Domains
+  
+  // Get the root domain without port
+  const rootDomainClean = rootDomain.split(':')[0].toLowerCase();
+  
+  console.log('[Middleware] Checking custom domain. Root:', rootDomainClean);
+  
+  // Check if this is the apex or www domain (no subdomain)
+  if (hostname === rootDomainClean || hostname === `www.${rootDomainClean}`) {
+    console.log('[Middleware] Apex or www domain - no subdomain');
+    return null;
+  }
+  
+  // Check if hostname ends with the root domain (it's a subdomain)
+  if (hostname.endsWith(`.${rootDomainClean}`)) {
+    const subdomain = hostname.replace(`.${rootDomainClean}`, '');
+    console.log('[Middleware] Custom domain subdomain found:', subdomain);
+    return subdomain;
+  }
 
-  // Regular subdomain detection
-  const isSubdomain =
-    hostname !== rootDomainFormatted &&
-    hostname !== `www.${rootDomainFormatted}` &&
-    hostname.endsWith(`.${rootDomainFormatted}`);
-
-  return isSubdomain ? hostname.replace(`.${rootDomainFormatted}`, '') : null;
+  console.log('[Middleware] No subdomain detected');
+  return null;
 }
 
 export async function middleware(request: NextRequest) {

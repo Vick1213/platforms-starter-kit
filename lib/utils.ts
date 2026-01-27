@@ -9,33 +9,61 @@ function stripProtocol(url: string): string {
   return url.replace(/^https?:\/\//, '');
 }
 
-// Determine root domain - use Vercel URL in production if custom domain not set
+/**
+ * Custom Domain Configuration:
+ * - Set NEXT_PUBLIC_ROOT_DOMAIN=supplyme.asia in Vercel environment variables
+ * - Point domain nameservers to ns1.vercel-dns.com and ns2.vercel-dns.com
+ * - Add both supplyme.asia AND *.supplyme.asia in Vercel Project Settings > Domains
+ */
 export const rootDomain = (() => {
-  // Explicit custom domain takes priority
-  if (process.env.NEXT_PUBLIC_ROOT_DOMAIN && 
-      process.env.NEXT_PUBLIC_ROOT_DOMAIN !== 'localhost:3000') {
-    return stripProtocol(process.env.NEXT_PUBLIC_ROOT_DOMAIN);
+  // Check for custom domain first (for production with your own domain)
+  const customDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  if (customDomain && 
+      customDomain !== 'localhost:3000' &&
+      !customDomain.includes('.vercel.app') &&
+      !customDomain.includes('.vercel.dev')) {
+    return stripProtocol(customDomain);
   }
-  // Use Vercel deployment URL in production
+  
+  // Vercel deployment URL (preview deployments)
   if (process.env.VERCEL_URL) {
     return stripProtocol(process.env.VERCEL_URL);
   }
-  // Fallback
-  return stripProtocol(process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000');
+  
+  // Fallback for local development
+  return 'localhost:3000';
 })();
 
 // Check if we're on a Vercel preview deployment (*.vercel.app or *.vercel.dev)
-export const isVercelPreview = rootDomain.includes('.vercel.app') || rootDomain.includes('.vercel.dev');
+// This is NOT a custom domain scenario
+export const isVercelPreview = (() => {
+  const vercelUrl = process.env.VERCEL_URL || '';
+  return vercelUrl.includes('.vercel.app') || vercelUrl.includes('.vercel.dev');
+})();
+
+// Check if using custom domain (like supplyme.asia)
+export const isCustomDomain = (() => {
+  const customDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  return customDomain && 
+         customDomain !== 'localhost:3000' &&
+         !customDomain.includes('.vercel.app') &&
+         !customDomain.includes('.vercel.dev');
+})();
 
 /**
  * Build a subdomain URL that works correctly for:
  * - Local development: subdomain.localhost:3000
  * - Vercel preview: subdomain---project-name.vercel.app (using --- prefix syntax)
- * - Custom domain: subdomain.yourdomain.com
+ * - Custom domain: subdomain.supplyme.asia (real wildcard subdomains)
  * 
- * NOTE: Vercel does NOT support wildcard subdomains on *.vercel.app
- * Instead, we use the "---" prefix syntax for multi-tenant preview URLs
- * See: https://vercel.com/platforms/docs/multi-tenant-platforms/preview-url-prefixes
+ * For Vercel preview deployments (*.vercel.app):
+ *   - Wildcard subdomains don't work
+ *   - Use "---" prefix syntax: seller---platforms-starter-kit.vercel.app
+ * 
+ * For custom domains (supplyme.asia):
+ *   - Add *.supplyme.asia in Vercel Project Settings > Domains
+ *   - Point nameservers to ns1.vercel-dns.com and ns2.vercel-dns.com
+ *   - Real subdomains work: seller.supplyme.asia, admin-xxx.supplyme.asia
  */
 export function buildSubdomainUrl(subdomain: string): string {
   // Local development
@@ -43,12 +71,19 @@ export function buildSubdomainUrl(subdomain: string): string {
     return `${protocol}://${subdomain}.${rootDomain}`;
   }
   
-  // Vercel preview deployment - use --- prefix syntax
-  if (isVercelPreview) {
-    return `${protocol}://${subdomain}---${rootDomain}`;
+  // Custom domain - use traditional subdomain (wildcard works with Vercel nameservers)
+  if (isCustomDomain) {
+    return `https://${subdomain}.${rootDomain}`;
   }
   
-  // Custom domain - use traditional subdomain
+  // Vercel preview deployment - use --- prefix syntax
+  // This only works on paid Vercel plans
+  if (isVercelPreview) {
+    const vercelUrl = process.env.VERCEL_URL || rootDomain;
+    return `https://${subdomain}---${vercelUrl}`;
+  }
+  
+  // Fallback to traditional subdomain
   return `${protocol}://${subdomain}.${rootDomain}`;
 }
 
