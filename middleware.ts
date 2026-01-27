@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { rootDomain } from '@/lib/utils';
+import { rootDomain, isVercelPreview } from '@/lib/utils';
 import { 
   isAdminSubdomain, 
   isSellerSubdomain, 
@@ -139,8 +139,26 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ============================================
+  // VERCEL PREVIEW - ALLOW PATH-BASED ACCESS
+  // ============================================
+  // The --- prefix syntax requires a PAID Vercel plan (Pro/Enterprise)
+  // For free tier, we allow path-based access to admin/seller on Vercel
+  // Example: platforms-starter-kit-xi-rouge.vercel.app/admin
+  // ============================================
+  
+  if (!subdomain && isVercelPreview) {
+    // On Vercel preview without subdomain, allow direct path access
+    if (pathname.startsWith('/admin') || pathname.startsWith('/seller') || pathname.startsWith('/auth')) {
+      return NextResponse.next({
+        request: { headers: requestHeaders },
+      });
+    }
+  }
+
   // MAIN DOMAIN - block direct admin access (must use secret subdomain)
-  if (!subdomain && pathname.startsWith('/admin')) {
+  // Skip this check on Vercel preview since subdomains don't work there
+  if (!subdomain && !isVercelPreview && pathname.startsWith('/admin')) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
