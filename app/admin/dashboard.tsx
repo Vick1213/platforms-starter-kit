@@ -50,10 +50,16 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'sellers' | 'users' | 'subdomains'>('overview');
 
-  const handleSignOut = async () => {
+  const handleFullSignOut = async () => {
+    await fetch('/api/auth/signout', { method: 'POST' });
     await signOut({ redirect: false });
-    router.refresh();
-    router.push('/');
+    window.location.href = '/';
+  };
+
+  const handleExitToMain = () => {
+    window.location.href = process.env.NODE_ENV === 'production' 
+      ? 'https://supplyme.asia' 
+      : 'http://localhost:3000';
   };
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -196,14 +202,26 @@ export function AdminDashboard({ tenants, sellers, users, currentUser }: AdminDa
                   <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-gray-600 hover:text-red-600 hover:bg-red-50"
-                onClick={handleSignOut}
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign out
-              </Button>
+              
+              {/* Sign Out Options */}
+              <div className="space-y-1">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  onClick={handleExitToMain}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Exit to Main Site
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleFullSignOut}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out Completely
+                </Button>
+              </div>
             </div>
           </div>
         </aside>

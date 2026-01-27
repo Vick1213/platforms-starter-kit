@@ -1,11 +1,12 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Store } from 'lucide-react';
+import { Store, LogOut, ChevronDown, User, ShieldCheck } from 'lucide-react';
 import type { UserRole } from '@/lib/auth-config';
-import { getSellerPortalUrl } from '@/lib/utils';
+import { getSellerPortalUrl, getMainSiteUrl } from '@/lib/utils';
 
 type UserNavProps = {
   user: {
@@ -17,11 +18,34 @@ type UserNavProps = {
 
 export function UserNav({ user }: UserNavProps) {
   const router = useRouter();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleSignOut = async () => {
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleFullSignOut = async () => {
+    setShowDropdown(false);
+    // Clear cookies via server-side API first (handles cross-subdomain cookies)
+    await fetch('/api/auth/signout', { method: 'POST' });
+    // Then call NextAuth signOut
     await signOut({ redirect: false });
-    router.refresh();
-    router.push('/');
+    // Force full page reload to clear all state
+    window.location.href = '/';
+  };
+
+  const handleSignOutToMain = () => {
+    setShowDropdown(false);
+    // Just redirect to main site, stay logged in
+    window.location.href = getMainSiteUrl();
   };
 
   if (!user) {
@@ -37,21 +61,87 @@ export function UserNav({ user }: UserNavProps) {
     );
   }
 
+  const isSeller = user.role === 'SELLER';
+  const isAdmin = user.role === 'ADMIN';
+
   return (
     <div className="flex items-center gap-4">
       <span className="text-gray-600">Hi, {user.name?.split(' ')[0] || 'User'}</span>
-      {user.role === 'SELLER' && (
+      {isSeller && (
         <a href={getSellerPortalUrl()} className="text-orange-600 hover:underline font-medium flex items-center gap-1">
           <Store className="w-4 h-4" />
           My Store
         </a>
       )}
-      <button 
-        onClick={handleSignOut}
-        className="text-gray-600 hover:text-orange-600 cursor-pointer"
-      >
-        Sign Out
-      </button>
+      
+      {/* Sign Out Dropdown */}
+      <div className="relative" ref={dropdownRef}>
+        <button 
+          onClick={() => setShowDropdown(!showDropdown)}
+          className="text-gray-600 hover:text-orange-600 cursor-pointer flex items-center gap-1"
+        >
+          Sign Out
+          {(isSeller || isAdmin) && <ChevronDown className="w-3 h-3" />}
+        </button>
+        
+        {showDropdown && (isSeller || isAdmin) && (
+          <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border py-1 z-50">
+            <div className="px-3 py-2 border-b">
+              <p className="text-xs text-gray-500">Signed in as</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+              <p className="text-xs text-orange-600 flex items-center gap-1 mt-1">
+                {isAdmin && <><ShieldCheck className="w-3 h-3" /> Admin</>}
+                {isSeller && !isAdmin && <><Store className="w-3 h-3" /> Seller</>}
+              </p>
+            </div>
+            
+            {isSeller && (
+              <button
+                onClick={handleSignOutToMain}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <User className="w-4 h-4" />
+                Exit Seller Portal
+                <span className="text-xs text-gray-400 ml-auto">Stay signed in</span>
+              </button>
+            )}
+            
+            {isAdmin && (
+              <button
+                onClick={handleSignOutToMain}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <User className="w-4 h-4" />
+                Exit Admin Panel
+                <span className="text-xs text-gray-400 ml-auto">Stay signed in</span>
+              </button>
+            )}
+            
+            <div className="border-t mt-1 pt-1">
+              <button
+                onClick={handleFullSignOut}
+                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out Completely
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Simple sign out for regular users */}
+        {showDropdown && !isSeller && !isAdmin && (
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50">
+            <button
+              onClick={handleFullSignOut}
+              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

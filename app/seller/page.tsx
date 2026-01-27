@@ -4,6 +4,9 @@ import { getSellerByUserId } from '@/lib/db';
 import { UserRole } from '@/lib/auth-config';
 import { SellerDashboard } from './dashboard';
 
+// Ensure this page is always dynamic (not cached)
+export const dynamic = 'force-dynamic';
+
 export default async function SellerPage() {
   const session = await auth();
 

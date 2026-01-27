@@ -9,6 +9,9 @@ import {
   DollarSign, Package, BarChart3, Globe, CheckCircle2, Ship, Calculator
 } from 'lucide-react';
 
+// Ensure this page is always dynamic (not cached)
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Manufacturer Portal | Supply Me',
   description: 'List your factory on Supply Me and connect with importers worldwide'

@@ -29,11 +29,18 @@ type SellerDashboardProps = {
 export function SellerDashboard({ seller, user }: SellerDashboardProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSignOutOptions, setShowSignOutOptions] = useState(false);
 
-  const handleSignOut = async () => {
+  const handleFullSignOut = async () => {
+    await fetch('/api/auth/signout', { method: 'POST' });
     await signOut({ redirect: false });
-    router.refresh();
-    router.push('/');
+    window.location.href = '/';
+  };
+
+  const handleExitToMain = () => {
+    window.location.href = process.env.NODE_ENV === 'production' 
+      ? 'https://supplyme.asia' 
+      : 'http://localhost:3000';
   };
 
   const stats = [
@@ -157,14 +164,26 @@ export function SellerDashboard({ seller, user }: SellerDashboardProps) {
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-gray-600 hover:text-red-600 hover:bg-red-50"
-                onClick={handleSignOut}
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign out
-              </Button>
+              
+              {/* Sign Out Options */}
+              <div className="space-y-1">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  onClick={handleExitToMain}
+                >
+                  <Store className="w-4 h-4 mr-2" />
+                  Exit to Main Site
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleFullSignOut}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out Completely
+                </Button>
+              </div>
             </div>
           </div>
         </aside>

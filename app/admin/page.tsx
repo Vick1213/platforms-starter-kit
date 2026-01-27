@@ -7,6 +7,9 @@ import { protocol, rootDomain } from '@/lib/utils';
 import type { Metadata } from 'next';
 import { AdminDashboard } from './dashboard';
 
+// Ensure this page is always dynamic (not cached)
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: `Admin Dashboard | ${rootDomain}`,
   description: `Manage ${rootDomain} platform`

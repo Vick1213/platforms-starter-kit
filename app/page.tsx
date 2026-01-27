@@ -10,6 +10,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { UserNav } from '@/components/user-nav';
 
+// Ensure this page is always dynamic (not cached)
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const session = await auth();
   const sellers = await getAllSellers();
