@@ -5,6 +5,8 @@ import { getSellerBySubdomain } from '@/lib/db';
 import { protocol, rootDomain, getMainSiteUrl, getSellerPortalUrl } from '@/lib/utils';
 import { ShoppingBag, Star, Shield, Truck, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StoreOwnerCheck } from '@/components/store-owner-check';
+import { SessionProvider } from 'next-auth/react';
 
 // Get URLs at build time for static generation
 const mainSiteUrl = getMainSiteUrl();
@@ -96,8 +98,17 @@ export default async function StorePage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Store Header */}
+    <SessionProvider>
+      <div className="min-h-screen bg-gray-50 pb-16">
+        {/* Store Owner Toolbar - only shows if logged-in user owns this store */}
+        <StoreOwnerCheck
+          sellerUserId={seller.userId}
+          sellerId={seller.id}
+          sellerSubdomain={seller.subdomain}
+          sellerPortalUrl={sellerPortalUrl}
+        />
+
+        {/* Store Header */}
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4">
           {/* Top Bar */}
@@ -271,5 +282,6 @@ export default async function StorePage({
         </div>
       </footer>
     </div>
+    </SessionProvider>
   );
 }

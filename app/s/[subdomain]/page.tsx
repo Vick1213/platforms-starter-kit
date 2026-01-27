@@ -3,7 +3,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getSellerBySubdomain } from '@/lib/db';
 import { redis } from '@/lib/redis';
-import { protocol, rootDomain } from '@/lib/utils';
+import { protocol, rootDomain, buildSubdomainUrl } from '@/lib/utils';
+import { StoreOwnerCheck } from '@/components/store-owner-check';
+import { SessionProvider } from 'next-auth/react';
 
 // Store customization interface
 interface StoreCustomization {
@@ -93,17 +95,29 @@ export default async function SubdomainPage({
   // Get customization
   const customization = await redis.get<StoreCustomization>(`seller:customization:${seller.id}`) || defaultCustomization;
 
+  // Build seller portal URL for owner toolbar
+  const sellerPortalUrl = buildSubdomainUrl('seller');
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Announcement Banner */}
-      {customization.showBanner && customization.bannerText && (
-        <div 
-          className="text-white text-center py-2 px-4 text-sm"
-          style={{ backgroundColor: customization.accentColor }}
-        >
-          {customization.bannerText}
-        </div>
-      )}
+    <SessionProvider>
+      <div className="min-h-screen bg-gray-50 pb-16">
+        {/* Store Owner Toolbar - only shows if logged-in user owns this store */}
+        <StoreOwnerCheck
+          sellerUserId={seller.userId}
+          sellerId={seller.id}
+          sellerSubdomain={seller.subdomain}
+          sellerPortalUrl={sellerPortalUrl}
+        />
+
+        {/* Announcement Banner */}
+        {customization.showBanner && customization.bannerText && (
+          <div 
+            className="text-white text-center py-2 px-4 text-sm"
+            style={{ backgroundColor: customization.accentColor }}
+          >
+            {customization.bannerText}
+          </div>
+        )}
 
       {/* Header */}
       <header 
@@ -394,5 +408,6 @@ export default async function SubdomainPage({
         </div>
       </footer>
     </div>
+    </SessionProvider>
   );
 }
