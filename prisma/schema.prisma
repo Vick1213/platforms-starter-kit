@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// SCRAPED DATA MODELS (populated by external scraper)
+// ============================================
+
+// Companies scraped from external sources
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?  @unique // Website domain for linking with sellers
+  description String?
+  logo        String?
+  website     String?
+  industry    String?
+  country     String?
+  city        String?
+  address     String?
+  phone       String?
+  email       String?
+  
+  // Linking to registered sellers (if domain/name matches)
+  sellerId    String?  @unique
+  seller      Seller?  @relation(fields: [sellerId], references: [id])
+  
+  // Products from this company
+  products    Product[]
+  
+  // Locations/branches of this company
+  locations   Location[]
+  
+  // Metadata
+  source      String?  // Where the data was scraped from
+  scrapedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  verified    Boolean  @default(false)
+  
+  @@index([name])
+  @@index([domain])
+  @@index([industry])
+  @@index([country])
+}
+
+// Products scraped from external sources
+model Product {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Float?
+  currency      String   @default("USD")
+  category      String?
+  subcategory   String?
+  brand         String?
+  sku           String?
+  barcode       String?
+  
+  // Images
+  images        String[] // Array of image URLs
+  thumbnail     String?
+  
+  // Product details
+  specifications Json?    // Flexible JSON for product specs
+  features      String[]
+  tags          String[]
+  
+  // Availability
+  inStock       Boolean  @default(true)
+  stockQuantity Int?
+  
+  // Company relationship
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Location where product is available
+  locationId    String?
+  location      Location? @relation(fields: [locationId], references: [id])
+  
+  // Metadata
+  source        String?  // Where the data was scraped from
+  sourceUrl     String?  // Original product page URL
+  scrapedAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([name])
+  @@index([category])
+  @@index([brand])
+  @@index([companyId])
+  @@index([price])
+}
+
+// Locations/branches of companies
+model Location {
+  id          String   @id @default(cuid())
+  name        String?  // Branch name
+  type        String?  // headquarters, branch, warehouse, store
+  
+  // Address
+  address     String?
+  city        String?
+  state       String?
+  country     String?
+  postalCode  String?
+  
+  // Coordinates for map display
+  latitude    Float?
+  longitude   Float?
+  
+  // Contact
+  phone       String?
+  email       String?
+  
+  // Company relationship
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Products available at this location
+  products    Product[]
+  
+  // Operating hours (JSON for flexibility)
+  operatingHours Json?
+  
+  // Metadata
+  scrapedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([city])
+  @@index([country])
+  @@index([companyId])
+}
+
+// ============================================
+// REGISTERED SELLERS (from your app)
+// ============================================
+
+// Sellers who register on your platform
+// Links to scraped Company data if domain/name matches
+model Seller {
+  id            String   @id @default(cuid())
+  
+  // Owner info
+  userId        String   @unique
+  email         String   @unique
+  
+  // Business info
+  businessName  String
+  subdomain     String   @unique
+  description   String?
+  
+  // Domain for linking with scraped data
+  domain        String?  @unique // e.g., "acme.com"
+  
+  // Branding
+  logo          String?
+  banner        String?
+  
+  // Contact
+  phone         String?
+  address       String?
+  
+  // Status
+  status        String   @default("pending") // pending, approved, rejected, suspended
+  verified      Boolean  @default(false)
+  rating        Float    @default(0)
+  
+  // Linked company from scraped data
+  company       Company?
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([businessName])
+  @@index([subdomain])
+  @@index([domain])
+  @@index([status])
+}
+
+// ============================================
+// SEARCH & CATEGORIES
+// ============================================
+
+// Product categories for navigation
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  image       String?
+  parentId    String?
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([slug])
+  @@index([parentId])
+}
+
+// Search history for analytics
+model SearchQuery {
+  id          String   @id @default(cuid())
+  query       String
+  userId      String?
+  resultsCount Int     @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([query])
+  @@index([createdAt])
+}
