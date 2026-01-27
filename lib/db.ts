@@ -222,7 +222,7 @@ export async function getAllUsers(): Promise<User[]> {
   const keys = await redis.keys('user:user_*');
   if (!keys.length) return [];
 
-  const users = await redis.mget<User[]>(...keys);
+  const users = await redis.mget<User>(...keys);
   return users.filter((u): u is User => u !== null);
 }
 

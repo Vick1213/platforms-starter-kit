@@ -89,7 +89,8 @@ export const redis = {
 
   async sismember(key: string, member: string): Promise<boolean> {
     await connectRedis();
-    return client.sIsMember(key, member);
+    const result = await client.sIsMember(key, member);
+    return Boolean(result);
   },
 
   async incr(key: string): Promise<number> {
