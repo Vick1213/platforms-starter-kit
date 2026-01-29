@@ -10,6 +10,10 @@ interface StoreCustomization {
   headerStyle: 'minimal' | 'standard' | 'bold';
   showBanner: boolean;
   bannerText: string;
+  logo: string;
+  favicon: string;
+  colorPlacement: 'header' | 'footer' | 'background' | 'buttons';
+  bio: string;
   socialLinks: {
     website: string;
     facebook: string;
@@ -23,6 +27,12 @@ interface StoreCustomization {
     address: string;
   };
   aboutUs: string;
+  contacts: {
+    telegram?: string;
+    twitter?: string;
+    tiktok?: string;
+    [key: string]: string | undefined;
+  };
   policies: {
     shipping: string;
     returns: string;
