@@ -13,7 +13,7 @@ import {
   ShoppingBag, ArrowLeft, Save, Store, Palette, Globe, 
   Shield, Image as ImageIcon, Layers, Menu, FileText,
   Check, AlertCircle, Loader2, ExternalLink, Copy, Trash2,
-  Layout, Type, PanelTop, Eye
+  Layout, Type, PanelTop, Eye, Star, MessageCircle
 } from 'lucide-react';
 import { buildSubdomainUrl, rootDomain, isVercelPreview } from '@/lib/utils';
 
@@ -28,6 +28,10 @@ import {
   NavigationEditor,
   CustomPagesEditor,
 } from '@/components/store-builder';
+
+// Review Settings
+import { ReviewSettingsEditor } from '@/components/reviews';
+import { ReviewSettings, defaultReviewSettings } from '@/lib/review-types';
 
 // Types
 import { 
@@ -59,6 +63,7 @@ export default function SellerSettingsPage() {
   const [activeTab, setActiveTab] = useState('theme');
   const [seller, setSeller] = useState<SellerData | null>(null);
   const [customization, setCustomization] = useState<StoreCustomization>(defaultStoreCustomization);
+  const [reviewSettings, setReviewSettings] = useState<ReviewSettings>(defaultReviewSettings);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPreview, setShowPreview] = useState(true);
 
@@ -105,6 +110,15 @@ export default function SellerSettingsPage() {
         const customData = await customRes.json();
         if (customData.customization) {
           setCustomization(mergeWithDefaults(customData.customization));
+        }
+      }
+
+      // Fetch review settings
+      const reviewRes = await fetch('/api/reviews?action=settings');
+      if (reviewRes.ok) {
+        const reviewData = await reviewRes.json();
+        if (reviewData.settings) {
+          setReviewSettings(reviewData.settings);
         }
       }
     } catch (error) {
@@ -204,6 +218,7 @@ export default function SellerSettingsPage() {
     { id: 'colors', label: 'Colors & Fonts', icon: Type },
     { id: 'navigation', label: 'Navigation', icon: Menu },
     { id: 'pages', label: 'Pages', icon: FileText },
+    { id: 'reviews', label: 'Reviews', icon: Star },
     { id: 'profile', label: 'Profile', icon: Store },
     { id: 'social', label: 'Social & Contact', icon: Globe },
     { id: 'policies', label: 'Policies', icon: Shield },
@@ -821,6 +836,34 @@ export default function SellerSettingsPage() {
                     />
                   </div>
                 </div>
+              )}
+
+              {/* Reviews Tab */}
+              {activeTab === 'reviews' && (
+                <ReviewSettingsEditor
+                  settings={reviewSettings}
+                  onSave={async (settings) => {
+                    try {
+                      const res = await fetch('/api/reviews', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          action: 'save-settings',
+                          settings,
+                        }),
+                      });
+                      if (res.ok) {
+                        setReviewSettings(settings);
+                        setMessage({ type: 'success', text: 'Review settings saved!' });
+                      } else {
+                        throw new Error('Failed to save');
+                      }
+                    } catch (error) {
+                      setMessage({ type: 'error', text: 'Failed to save review settings' });
+                      throw error;
+                    }
+                  }}
+                />
               )}
 
               {/* Policies Tab */}

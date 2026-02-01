@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { 
   ShoppingBag, Package, TrendingUp, DollarSign, Users, Settings, 
   LogOut, Store, Plus, BarChart3, ShoppingCart, Clock, CheckCircle2,
-  AlertCircle, ExternalLink, Menu, X
+  AlertCircle, ExternalLink, Menu, X, MessageCircle
 } from 'lucide-react';
 import { buildSubdomainUrl, rootDomain, isVercelPreview } from '@/lib/utils';
 import type { Seller } from '@/lib/types';
@@ -130,6 +130,13 @@ export function SellerDashboard({ seller, user, productCount = 0, products = [] 
               >
                 <TrendingUp className="w-5 h-5" />
                 Analytics
+              </Link>
+              <Link 
+                href="/seller/messages" 
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Messages
               </Link>
               <Link 
                 href="/seller/settings" 

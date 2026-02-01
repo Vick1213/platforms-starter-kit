@@ -362,6 +362,31 @@ export async function getProductById(id: string) {
         },
       },
       location: true,
+      images: true,
+    },
+  });
+}
+
+export async function getProductBySlug(slug: string) {
+  return prisma.product.findFirst({
+    where: { slug },
+    include: {
+      company: {
+        include: {
+          seller: {
+            select: {
+              id: true,
+              subdomain: true,
+              businessName: true,
+              verified: true,
+              rating: true,
+            },
+          },
+          locations: true,
+        },
+      },
+      location: true,
+      images: true,
     },
   });
 }

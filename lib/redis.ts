@@ -103,6 +103,16 @@ export const redis = {
     await client.lPush(key, values);
   },
 
+  async rpush(key: string, ...values: string[]): Promise<void> {
+    await connectRedis();
+    await client.rPush(key, values);
+  },
+
+  async lrem(key: string, count: number, element: string): Promise<number> {
+    await connectRedis();
+    return client.lRem(key, count, element);
+  },
+
   async lrange(key: string, start: number, stop: number): Promise<string[]> {
     await connectRedis();
     return client.lRange(key, start, stop);
