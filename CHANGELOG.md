@@ -1,12 +1,96 @@
 # MarketPlace Platform - Development Changelog & System Report
 
-**Generated:** January 31, 2026  
+**Generated:** February 1, 2026  
 **Project:** Multi-Tenant E-commerce Marketplace  
 **Stack:** Next.js 15, NextAuth.js v5, Redis Cloud, Tailwind CSS 4
 
 ---
 
-## 🆕 Latest Update: Store Builder (January 31, 2026)
+## 🆕 Latest Update: Shopping Cart & Checkout System (February 1, 2026)
+
+### Overview
+Added a complete e-commerce shopping cart and checkout system, along with missing store pages (products listing, categories, about, contact). Customers can now browse products, add items to cart, and complete a multi-step checkout process.
+
+### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `lib/cart-types.ts` | Type definitions for Cart, CartItem, Order, ShippingAddress, PaymentMethod with helper functions |
+| `lib/cart-db.ts` | Redis operations for cart persistence (getCart, saveCart, addToCart, clearCart) and order management |
+| `app/api/cart/route.ts` | RESTful cart API (GET/POST/PATCH/DELETE) with session-based cookies |
+| `app/api/orders/route.ts` | Order creation and retrieval API endpoints |
+| `app/store/[subdomain]/products/page.tsx` | Product listing page with search, sort, and grid display |
+| `app/store/[subdomain]/categories/page.tsx` | Categories page grouped by product data |
+| `app/store/[subdomain]/about/page.tsx` | About page with seller story, stats, and testimonials |
+| `app/store/[subdomain]/contact/page.tsx` | Contact form with seller info and business hours |
+| `app/store/[subdomain]/cart/page.tsx` | Shopping cart UI with quantity controls and order summary |
+| `app/store/[subdomain]/checkout/page.tsx` | Multi-step checkout (shipping → payment → review) |
+| `app/store/[subdomain]/order-confirmation/page.tsx` | Order confirmation with details and next steps |
+| `app/store/[subdomain]/products/[slug]/add-to-cart-button.tsx` | Client component for adding products to cart |
+
+### Features Implemented
+
+#### Shopping Cart
+- ✅ **Session-based Cart** - Cart persists via cookies for 7 days using Redis storage
+- ✅ **Add to Cart** - Quantity selector with MOQ validation on product pages
+- ✅ **Cart Management** - Update quantities, remove items, clear cart
+- ✅ **Cart Totals** - Auto-calculated subtotal, tax, shipping, and total
+
+#### Checkout Process
+- ✅ **Multi-step Flow** - Shipping → Payment → Review with progress indicator
+- ✅ **Shipping Form** - Full address collection with validation
+- ✅ **Payment Methods** - Request for Quote, Bank Transfer, PayPal, Credit Card options
+- ✅ **Order Review** - Summary of items, addresses, and totals before submission
+- ✅ **Order Confirmation** - Detailed confirmation page with order number and next steps
+
+#### Store Pages
+- ✅ **Products Listing** - Search, sort (price, newest, name), responsive grid
+- ✅ **Categories Page** - Auto-generated from product categories
+- ✅ **About Page** - Seller story, years in business, rating display, testimonials
+- ✅ **Contact Page** - Contact form, business hours, address, social links
+
+### Cart & Order Types
+
+```typescript
+interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  moq?: number;
+  image?: string;
+  sellerId: string;
+}
+
+interface Order {
+  id: string;
+  orderNumber: string;
+  items: OrderItem[];
+  subtotal: number;
+  shippingCost: number;
+  tax: number;
+  total: number;
+  shippingAddress: ShippingAddress;
+  paymentMethod: PaymentMethod;
+  status: OrderStatus;
+}
+```
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/cart` | GET | Fetch current cart for subdomain |
+| `/api/cart` | POST | Add item to cart |
+| `/api/cart` | PATCH | Update item quantity |
+| `/api/cart` | DELETE | Remove item or clear cart |
+| `/api/orders` | POST | Create new order from cart |
+| `/api/orders` | GET | Retrieve order by number/email |
+
+---
+
+## 🏪 Store Builder (January 31, 2026)
 
 ### Overview
 Added a comprehensive website builder for seller stores, allowing sellers to customize their storefronts with themes, colors, typography, sections, and more - similar to Shopify or Squarespace.
