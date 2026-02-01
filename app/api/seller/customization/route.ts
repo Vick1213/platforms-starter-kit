@@ -2,43 +2,11 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getSellerByUserId } from '@/lib/db';
 import { redis } from '@/lib/redis';
-
-// Store customization interface
-interface StoreCustomization {
-  primaryColor: string;
-  accentColor: string;
-  headerStyle: 'minimal' | 'standard' | 'bold';
-  showBanner: boolean;
-  bannerText: string;
-  logo: string;
-  favicon: string;
-  colorPlacement: 'header' | 'footer' | 'background' | 'buttons';
-  bio: string;
-  socialLinks: {
-    website: string;
-    facebook: string;
-    instagram: string;
-    linkedin: string;
-    whatsapp: string;
-  };
-  contactInfo: {
-    email: string;
-    phone: string;
-    address: string;
-  };
-  aboutUs: string;
-  contacts: {
-    telegram?: string;
-    twitter?: string;
-    tiktok?: string;
-    [key: string]: string | undefined;
-  };
-  policies: {
-    shipping: string;
-    returns: string;
-    privacy: string;
-  };
-}
+import { 
+  StoreCustomization, 
+  defaultStoreCustomization, 
+  mergeWithDefaults 
+} from '@/lib/store-customization-types';
 
 // GET /api/seller/customization - Get store customization
 export async function GET() {
@@ -84,25 +52,22 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
 
-    const customization: StoreCustomization = await request.json();
+    const customization: Partial<StoreCustomization> = await request.json();
 
-    // Validate colors
+    // Validate colors if provided
     const colorRegex = /^#[0-9A-Fa-f]{6}$/;
-    if (customization.primaryColor && !colorRegex.test(customization.primaryColor)) {
+    if (customization.colors?.primary && !colorRegex.test(customization.colors.primary)) {
       return NextResponse.json(
         { error: 'Invalid primary color format' },
         { status: 400 }
       );
     }
-    if (customization.accentColor && !colorRegex.test(customization.accentColor)) {
-      return NextResponse.json(
-        { error: 'Invalid accent color format' },
-        { status: 400 }
-      );
-    }
+
+    // Merge with defaults to ensure all fields exist
+    const mergedCustomization = mergeWithDefaults(customization);
 
     // Save customization
-    await redis.set(`store:custom:${seller.id}`, customization);
+    await redis.set(`store:custom:${seller.id}`, mergedCustomization);
 
     return NextResponse.json({
       success: true,

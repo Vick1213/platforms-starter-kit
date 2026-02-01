@@ -1,8 +1,102 @@
 # MarketPlace Platform - Development Changelog & System Report
 
-**Generated:** January 26, 2026  
+**Generated:** January 31, 2026  
 **Project:** Multi-Tenant E-commerce Marketplace  
 **Stack:** Next.js 15, NextAuth.js v5, Redis Cloud, Tailwind CSS 4
+
+---
+
+## 🆕 Latest Update: Store Builder (January 31, 2026)
+
+### Overview
+Added a comprehensive website builder for seller stores, allowing sellers to customize their storefronts with themes, colors, typography, sections, and more - similar to Shopify or Squarespace.
+
+### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `lib/store-customization-types.ts` | Comprehensive type system (688 lines) with all customization interfaces, theme presets, and helper functions |
+| `components/store-builder/live-preview.tsx` | Real-time iframe preview with device switcher (desktop/tablet/mobile) and fullscreen mode |
+| `components/store-builder/theme-selector.tsx` | 5 theme presets (Modern, Minimal, Bold, Elegant, Traditional) with one-click application |
+| `components/store-builder/section-builder.tsx` | Drag-drop section reordering with visibility toggles and 6+ section types |
+| `components/store-builder/color-typography-editor.tsx` | 9-color palette editor + Google Fonts selector with 10 font families |
+| `components/store-builder/hero-editor.tsx` | Hero customization (gradient/image/video/slideshow/none) with height and alignment controls |
+| `components/store-builder/navigation-editor.tsx` | Menu management with add/edit/remove/reorder functionality |
+| `components/store-builder/custom-pages-editor.tsx` | Custom page creation with templates (About, FAQ, Contact, Terms, Privacy) |
+| `components/store-builder/index.ts` | Barrel export file for all store builder components |
+
+### Modified Files
+
+| File | Changes |
+|------|---------|
+| `app/seller/settings/page.tsx` | Complete rewrite with 9-tab store builder UI featuring live preview panel |
+| `app/store/[subdomain]/page.tsx` | Updated to render all customization options dynamically (header styles, hero types, sections, footer styles) |
+| `app/api/seller/customization/route.ts` | Updated to use new types with `mergeWithDefaults()` for backwards compatibility |
+
+### Features Implemented
+
+#### Phase 1: Enhanced Branding
+- ✅ **Color Palette System** - 9 customizable colors (primary, secondary, accent, background, header/footer backgrounds, text, muted text, border)
+- ✅ **Typography Settings** - 10 Google Fonts (Inter, Roboto, Open Sans, Playfair Display, Montserrat, Lato, Poppins, Merriweather, Source Sans Pro, Raleway) with size options
+- ✅ **Header Styles** - 4 layouts (Standard, Minimal, Bold, Centered) with sticky/transparent options
+- ✅ **Announcement Bar** - Customizable top banner with optional link
+
+#### Phase 2: Page Builder
+- ✅ **Hero Section Types** - Gradient, Image, Video, Slideshow, or None with height controls (small/medium/large/full)
+- ✅ **Homepage Sections** - Featured Products, Trust Badges, About Block, Testimonials, FAQ, Newsletter, CTA Banner
+- ✅ **Section Builder** - Drag-drop reordering, visibility toggles, section-specific settings
+- ✅ **Product Grid Customization** - Columns (2-5), card styles, aspect ratios, show/hide price/MOQ/rating
+
+#### Phase 3: Advanced Features
+- ✅ **Theme Templates** - 5 pre-built themes with one-click application
+- ✅ **Live Preview** - Real-time preview with device switching (desktop/tablet/mobile) and fullscreen
+- ✅ **Navigation Editor** - Custom menu items with drag-drop reordering
+- ✅ **Custom Pages** - Create About, FAQ, Contact, Terms, Privacy pages with templates
+- ✅ **Footer Styles** - 4 layouts (Detailed, Simple, Minimal, Centered)
+- ✅ **Trust Badges** - Customizable icons and descriptions
+- ✅ **Testimonials** - Customer reviews with ratings and avatars
+- ✅ **FAQ System** - Accordion-style frequently asked questions
+
+### Type System
+
+```typescript
+// Main customization interface
+interface StoreCustomization {
+  theme: ThemeTemplate;
+  colors: ColorPalette;
+  typography: TypographySettings;
+  header: HeaderSettings;
+  hero: HeroSettings;
+  sections: HomepageSection[];
+  productGrid: ProductGridSettings;
+  footer: FooterSettings;
+  navigation: NavigationItem[];
+  pages: CustomPage[];
+  trustBadges: TrustBadge[];
+  testimonials: Testimonial[];
+  faq: FAQItem[];
+  socialLinks: SocialLinks;
+  contactInfo: ContactInfo;
+  policies: StorePolicies;
+}
+```
+
+### Helper Functions
+
+| Function | Purpose |
+|----------|---------|
+| `mergeWithDefaults(customization)` | Safely merges partial customization with defaults for backwards compatibility |
+| `generateCSSVariables(customization)` | Generates CSS custom properties from colors and typography |
+| `generateGoogleFontsUrl(customization)` | Creates Google Fonts import URL for selected fonts |
+
+### Store Page Rendering
+
+The store page now dynamically renders based on customization:
+
+1. **Header** - Renders one of 4 header styles with optional announcement bar
+2. **Hero** - Displays gradient, image, video, slideshow, or nothing based on settings
+3. **Sections** - Maps through enabled sections sorted by order, rendering appropriate component
+4. **Footer** - Renders one of 4 footer styles with social links and contact info
 
 ---
 

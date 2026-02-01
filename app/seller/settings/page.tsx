@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -11,10 +11,31 @@ import { Label } from '@/components/ui/label';
 import { FileUpload } from '@/components/ui/file-upload';
 import { 
   ShoppingBag, ArrowLeft, Save, Store, Palette, Globe, 
-  Bell, Shield, CreditCard, Truck, Image as ImageIcon,
-  Check, AlertCircle, Loader2, ExternalLink, Copy, Upload, Trash2
+  Shield, Image as ImageIcon, Layers, Menu, FileText,
+  Check, AlertCircle, Loader2, ExternalLink, Copy, Trash2,
+  Layout, Type, PanelTop, Eye
 } from 'lucide-react';
 import { buildSubdomainUrl, rootDomain, isVercelPreview } from '@/lib/utils';
+
+// Store Builder Components
+import { 
+  LivePreview, 
+  ThemeSelector, 
+  SectionBuilder, 
+  ColorEditor, 
+  TypographyEditor,
+  HeroEditor,
+  NavigationEditor,
+  CustomPagesEditor,
+} from '@/components/store-builder';
+
+// Types
+import { 
+  StoreCustomization, 
+  defaultStoreCustomization,
+  mergeWithDefaults,
+  ThemeTemplate,
+} from '@/lib/store-customization-types';
 
 interface SellerData {
   id: string;
@@ -30,82 +51,16 @@ interface SellerData {
   status: string;
 }
 
-interface StoreCustomization {
-  primaryColor: string;
-  accentColor: string;
-  headerStyle: 'minimal' | 'standard' | 'bold';
-  showBanner: boolean;
-  bannerText: string;
-  logo: string;
-  favicon: string;
-  colorPlacement: 'header' | 'footer' | 'background' | 'buttons';
-  bio: string;
-  socialLinks: {
-    website: string;
-    facebook: string;
-    instagram: string;
-    linkedin: string;
-    whatsapp: string;
-  };
-  contactInfo: {
-    email: string;
-    phone: string;
-    address: string;
-  };
-  aboutUs: string;
-  contacts: {
-    telegram?: string;
-    twitter?: string;
-    tiktok?: string;
-    [key: string]: string | undefined;
-  };
-  policies: {
-    shipping: string;
-    returns: string;
-    privacy: string;
-  };
-}
-
-const defaultCustomization: StoreCustomization = {
-  primaryColor: '#f97316',
-  accentColor: '#fbbf24',
-  headerStyle: 'standard',
-  showBanner: false,
-  bannerText: '',
-  logo: '',
-  favicon: '',
-  colorPlacement: 'header',
-  bio: '',
-  socialLinks: {
-    website: '',
-    facebook: '',
-    instagram: '',
-    linkedin: '',
-    whatsapp: '',
-  },
-  contactInfo: {
-    email: '',
-    phone: '',
-    address: '',
-  },
-  aboutUs: '',
-  contacts: {},
-  policies: {
-    shipping: '',
-    returns: '',
-    privacy: '',
-  },
-};
-
 export default function SellerSettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('theme');
   const [seller, setSeller] = useState<SellerData | null>(null);
-  const [customization, setCustomization] = useState<StoreCustomization>(defaultCustomization);
+  const [customization, setCustomization] = useState<StoreCustomization>(defaultStoreCustomization);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showPreview, setShowPreview] = useState(true);
 
   // Form states for profile
   const [businessName, setBusinessName] = useState('');
@@ -138,12 +93,18 @@ export default function SellerSettingsPage() {
         setDescription(data.seller.description || '');
         setLogo(data.seller.logo || '');
         setBanner(data.seller.banner || '');
-        
-        if (data.customization) {
-          setCustomization({ ...defaultCustomization, ...data.customization });
-        }
       } else if (res.status === 404) {
         router.push('/seller-portal');
+        return;
+      }
+
+      // Fetch customization
+      const customRes = await fetch('/api/seller/customization');
+      if (customRes.ok) {
+        const customData = await customRes.json();
+        if (customData.customization) {
+          setCustomization(mergeWithDefaults(customData.customization));
+        }
       }
     } catch (error) {
       console.error('Error fetching seller data:', error);
@@ -208,6 +169,10 @@ export default function SellerSettingsPage() {
     }
   };
 
+  const handleThemeChange = (theme: ThemeTemplate, updates: Partial<StoreCustomization>) => {
+    setCustomization(prev => mergeWithDefaults({ ...prev, ...updates }));
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setMessage({ type: 'success', text: 'Copied to clipboard!' });
@@ -232,28 +197,42 @@ export default function SellerSettingsPage() {
     : `${seller.subdomain}.${rootDomain}`;
 
   const tabs = [
+    { id: 'theme', label: 'Theme', icon: Palette },
+    { id: 'hero', label: 'Hero', icon: PanelTop },
+    { id: 'sections', label: 'Sections', icon: Layers },
+    { id: 'colors', label: 'Colors & Fonts', icon: Type },
+    { id: 'navigation', label: 'Navigation', icon: Menu },
+    { id: 'pages', label: 'Pages', icon: FileText },
     { id: 'profile', label: 'Profile', icon: Store },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'social', label: 'Social & Contact', icon: Globe },
     { id: 'policies', label: 'Policies', icon: Shield },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+      <header className="bg-white border-b sticky top-0 z-20">
+        <div className="max-w-[1800px] mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/seller" className="p-2 hover:bg-gray-100 rounded-lg">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Store Settings</h1>
-                <p className="text-sm text-gray-500">Customize your storefront</p>
+                <h1 className="text-lg font-bold text-gray-900">Store Builder</h1>
+                <p className="text-xs text-gray-500">Customize your storefront</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                  showPreview ? 'bg-orange-50 text-orange-600 border-orange-200' : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Eye className="w-4 h-4" />
+                {showPreview ? 'Hide' : 'Show'} Preview
+              </button>
               <a 
                 href={storeUrl}
                 target="_blank"
@@ -261,17 +240,34 @@ export default function SellerSettingsPage() {
                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border rounded-lg hover:bg-gray-50"
               >
                 <ExternalLink className="w-4 h-4" />
-                Preview Store
+                View Live Store
               </a>
+              <Button
+                onClick={handleSaveCustomization}
+                disabled={saving}
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Message */}
-        {message && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+      {/* Message */}
+      {message && (
+        <div className="max-w-[1800px] mx-auto px-4 pt-4">
+          <div className={`p-4 rounded-lg flex items-center gap-3 ${
             message.type === 'success' 
               ? 'bg-green-50 text-green-800 border border-green-200' 
               : 'bg-red-50 text-red-800 border border-red-200'
@@ -283,61 +279,222 @@ export default function SellerSettingsPage() {
             )}
             {message.text}
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar Navigation */}
-          <div className="lg:col-span-1">
-            <nav className="space-y-1">
+      <div className={`max-w-[1800px] mx-auto px-4 py-6 grid gap-6 ${
+        showPreview ? 'lg:grid-cols-2' : ''
+      }`}>
+        {/* Left Panel - Settings */}
+        <div className="space-y-6">
+          {/* Tab Navigation */}
+          <div className="bg-white rounded-xl border p-1">
+            <nav className="flex flex-wrap gap-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-orange-50 text-orange-600 font-medium'
+                      ? 'bg-orange-500 text-white'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
-                  <tab.icon className="w-5 h-5" />
+                  <tab.icon className="w-4 h-4" />
                   {tab.label}
                 </button>
               ))}
             </nav>
-
-            {/* Store URL Card */}
-            <Card className="mt-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Your Store URL</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-xs bg-gray-100 px-2 py-1.5 rounded truncate">
-                    {displayDomain}
-                  </code>
-                  <button 
-                    onClick={() => copyToClipboard(storeUrl)}
-                    className="p-1.5 hover:bg-gray-100 rounded"
-                  >
-                    <Copy className="w-4 h-4 text-gray-500" />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Profile Tab */}
-            {activeTab === 'profile' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Business Profile</CardTitle>
-                  <CardDescription>
-                    Update your business information that appears on your store
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
+          {/* Tab Content */}
+          <Card>
+            <CardContent className="p-6">
+              {/* Theme Tab */}
+              {activeTab === 'theme' && (
+                <ThemeSelector
+                  currentTheme={customization.theme}
+                  onThemeChange={handleThemeChange}
+                />
+              )}
+
+              {/* Hero Tab */}
+              {activeTab === 'hero' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Hero Section</h3>
+                    <p className="text-sm text-gray-500">Customize the main banner at the top of your store</p>
+                  </div>
+                  <HeroEditor
+                    hero={customization.hero}
+                    onHeroChange={(hero) => setCustomization(prev => ({ ...prev, hero }))}
+                  />
+                </div>
+              )}
+
+              {/* Sections Tab */}
+              {activeTab === 'sections' && (
+                <SectionBuilder
+                  sections={customization.sections}
+                  onSectionsChange={(sections) => setCustomization(prev => ({ ...prev, sections }))}
+                />
+              )}
+
+              {/* Colors & Fonts Tab */}
+              {activeTab === 'colors' && (
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-4">Colors</h3>
+                    <ColorEditor
+                      colors={customization.colors}
+                      onColorsChange={(colors) => setCustomization(prev => ({ ...prev, colors }))}
+                    />
+                  </div>
+                  <div className="pt-6 border-t">
+                    <h3 className="font-semibold text-gray-900 mb-4">Typography</h3>
+                    <TypographyEditor
+                      typography={customization.typography}
+                      onTypographyChange={(typography) => setCustomization(prev => ({ ...prev, typography }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Tab */}
+              {activeTab === 'navigation' && (
+                <div className="space-y-6">
+                  <NavigationEditor
+                    navigation={customization.navigation}
+                    onNavigationChange={(navigation) => setCustomization(prev => ({ ...prev, navigation }))}
+                  />
+                  
+                  <div className="pt-6 border-t">
+                    <h4 className="font-medium text-gray-900 mb-4">Header Settings</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Sticky Header</Label>
+                          <p className="text-xs text-gray-500">Header stays visible when scrolling</p>
+                        </div>
+                        <button
+                          onClick={() => setCustomization(prev => ({
+                            ...prev,
+                            header: { ...prev.header, sticky: !prev.header.sticky }
+                          }))}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            customization.header.sticky ? 'bg-orange-500' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                            customization.header.sticky ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Show Search</Label>
+                          <p className="text-xs text-gray-500">Display search bar in header</p>
+                        </div>
+                        <button
+                          onClick={() => setCustomization(prev => ({
+                            ...prev,
+                            header: { ...prev.header, showSearch: !prev.header.showSearch }
+                          }))}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            customization.header.showSearch ? 'bg-orange-500' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                            customization.header.showSearch ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Announcement Banner</Label>
+                          <p className="text-xs text-gray-500">Show promotional banner</p>
+                        </div>
+                        <button
+                          onClick={() => setCustomization(prev => ({
+                            ...prev,
+                            header: { 
+                              ...prev.header, 
+                              announcement: { 
+                                ...prev.header.announcement, 
+                                enabled: !prev.header.announcement.enabled 
+                              }
+                            }
+                          }))}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            customization.header.announcement.enabled ? 'bg-orange-500' : 'bg-gray-200'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                            customization.header.announcement.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
+                        </button>
+                      </div>
+
+                      {customization.header.announcement.enabled && (
+                        <div className="space-y-2 ml-4 pl-4 border-l-2 border-orange-200">
+                          <Input
+                            value={customization.header.announcement.text}
+                            onChange={(e) => setCustomization(prev => ({
+                              ...prev,
+                              header: {
+                                ...prev.header,
+                                announcement: { ...prev.header.announcement, text: e.target.value }
+                              }
+                            }))}
+                            placeholder="🎉 Free shipping on orders over $500!"
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label>Header Style</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {(['minimal', 'standard', 'bold', 'centered'] as const).map((style) => (
+                            <button
+                              key={style}
+                              onClick={() => setCustomization(prev => ({
+                                ...prev,
+                                header: { ...prev.header, style }
+                              }))}
+                              className={`p-3 border rounded-lg text-center capitalize transition-colors ${
+                                customization.header.style === style
+                                  ? 'border-orange-500 bg-orange-50 text-orange-600'
+                                  : 'hover:border-gray-300'
+                              }`}
+                            >
+                              <span className="text-xs font-medium">{style}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Pages Tab */}
+              {activeTab === 'pages' && (
+                <CustomPagesEditor
+                  pages={customization.pages}
+                  onPagesChange={(pages) => setCustomization(prev => ({ ...prev, pages }))}
+                />
+              )}
+
+              {/* Profile Tab */}
+              {activeTab === 'profile' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Business Profile</h3>
+                    <p className="text-sm text-gray-500">Update your business information</p>
+                  </div>
+                  
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="businessName">Business Name *</Label>
@@ -376,7 +533,7 @@ export default function SellerSettingsPage() {
                       id="description"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Tell customers about your business, what you manufacture, your expertise..."
+                      placeholder="Tell customers about your business..."
                       className="w-full min-h-[120px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
@@ -396,7 +553,6 @@ export default function SellerSettingsPage() {
                               <Trash2 className="w-5 h-5 text-white" />
                             </button>
                           </div>
-                          <p className="text-xs text-gray-500">Click image to remove</p>
                         </div>
                       ) : (
                         <FileUpload
@@ -412,7 +568,7 @@ export default function SellerSettingsPage() {
                           onError={(error) => setMessage({ type: 'error', text: error })}
                         />
                       )}
-                      <p className="text-xs text-gray-500">Recommended: 200x200px, PNG or JPG</p>
+                      <p className="text-xs text-gray-500">Recommended: 200x200px</p>
                     </div>
                     <div className="space-y-2">
                       <Label>Store Banner</Label>
@@ -428,7 +584,6 @@ export default function SellerSettingsPage() {
                               <Trash2 className="w-5 h-5 text-white" />
                             </button>
                           </div>
-                          <p className="text-xs text-gray-500">Click image to remove</p>
                         </div>
                       ) : (
                         <FileUpload
@@ -444,7 +599,23 @@ export default function SellerSettingsPage() {
                           onError={(error) => setMessage({ type: 'error', text: error })}
                         />
                       )}
-                      <p className="text-xs text-gray-500">Recommended: 1200x400px, PNG or JPG</p>
+                      <p className="text-xs text-gray-500">Recommended: 1200x400px</p>
+                    </div>
+                  </div>
+
+                  {/* Store URL */}
+                  <div className="pt-4 border-t">
+                    <Label className="mb-2 block">Your Store URL</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm bg-gray-100 px-3 py-2 rounded truncate">
+                        {displayDomain}
+                      </code>
+                      <button 
+                        onClick={() => copyToClipboard(storeUrl)}
+                        className="p-2 hover:bg-gray-100 rounded border"
+                      >
+                        <Copy className="w-4 h-4 text-gray-500" />
+                      </button>
                     </div>
                   </div>
 
@@ -467,215 +638,83 @@ export default function SellerSettingsPage() {
                       )}
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              )}
 
-            {/* Appearance Tab */}
-            {activeTab === 'appearance' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Store Appearance</CardTitle>
-                  <CardDescription>
-                    Customize the look and feel of your storefront
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="primaryColor">Primary Color</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          id="primaryColor"
-                          value={customization.primaryColor}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            primaryColor: e.target.value
-                          })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                        />
-                        <Input
-                          value={customization.primaryColor}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            primaryColor: e.target.value
-                          })}
-                          placeholder="#f97316"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="accentColor">Accent Color</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          id="accentColor"
-                          value={customization.accentColor}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            accentColor: e.target.value
-                          })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                        />
-                        <Input
-                          value={customization.accentColor}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            accentColor: e.target.value
-                          })}
-                          placeholder="#fbbf24"
-                          className="flex-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Header Style</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {(['minimal', 'standard', 'bold'] as const).map((style) => (
-                        <button
-                          key={style}
-                          onClick={() => setCustomization({ ...customization, headerStyle: style })}
-                          className={`p-4 border rounded-lg text-center capitalize transition-colors ${
-                            customization.headerStyle === style
-                              ? 'border-orange-500 bg-orange-50 text-orange-600'
-                              : 'hover:border-gray-300'
-                          }`}
-                        >
-                          {style}
-                        </button>
-                      ))}
-                    </div>
+              {/* Social & Contact Tab */}
+              {activeTab === 'social' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Social Links & Contact</h3>
+                    <p className="text-sm text-gray-500">Add your social media and contact information</p>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Announcement Banner</Label>
-                        <p className="text-sm text-gray-500">Show a banner at the top of your store</p>
-                      </div>
-                      <button
-                        onClick={() => setCustomization({ 
-                          ...customization, 
-                          showBanner: !customization.showBanner 
-                        })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          customization.showBanner ? 'bg-orange-500' : 'bg-gray-200'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          customization.showBanner ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
-                    {customization.showBanner && (
-                      <Input
-                        value={customization.bannerText}
-                        onChange={(e) => setCustomization({
-                          ...customization,
-                          bannerText: e.target.value
-                        })}
-                        placeholder="🎉 Free shipping on orders over $500!"
-                      />
-                    )}
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <Button 
-                      onClick={handleSaveCustomization}
-                      disabled={saving}
-                      className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Appearance
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Social & Contact Tab */}
-            {activeTab === 'social' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Social Links & Contact</CardTitle>
-                  <CardDescription>
-                    Add your social media profiles and contact information
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-gray-900">Social Media Links</h3>
+                    <h4 className="font-medium text-gray-900">Social Media</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="website">Website</Label>
+                        <Label>Website</Label>
                         <Input
-                          id="website"
                           value={customization.socialLinks.website}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            socialLinks: { ...customization.socialLinks, website: e.target.value }
-                          })}
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            socialLinks: { ...prev.socialLinks, website: e.target.value }
+                          }))}
                           placeholder="https://yourwebsite.com"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="facebook">Facebook</Label>
+                        <Label>Facebook</Label>
                         <Input
-                          id="facebook"
                           value={customization.socialLinks.facebook}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            socialLinks: { ...customization.socialLinks, facebook: e.target.value }
-                          })}
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            socialLinks: { ...prev.socialLinks, facebook: e.target.value }
+                          }))}
                           placeholder="https://facebook.com/yourpage"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="instagram">Instagram</Label>
+                        <Label>Instagram</Label>
                         <Input
-                          id="instagram"
                           value={customization.socialLinks.instagram}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            socialLinks: { ...customization.socialLinks, instagram: e.target.value }
-                          })}
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            socialLinks: { ...prev.socialLinks, instagram: e.target.value }
+                          }))}
                           placeholder="https://instagram.com/yourprofile"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="linkedin">LinkedIn</Label>
+                        <Label>LinkedIn</Label>
                         <Input
-                          id="linkedin"
                           value={customization.socialLinks.linkedin}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            socialLinks: { ...customization.socialLinks, linkedin: e.target.value }
-                          })}
-                          placeholder="https://linkedin.com/company/yourcompany"
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            socialLinks: { ...prev.socialLinks, linkedin: e.target.value }
+                          }))}
+                          placeholder="https://linkedin.com/company/yours"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="whatsapp">WhatsApp</Label>
+                        <Label>Twitter/X</Label>
                         <Input
-                          id="whatsapp"
+                          value={customization.socialLinks.twitter}
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            socialLinks: { ...prev.socialLinks, twitter: e.target.value }
+                          }))}
+                          placeholder="https://twitter.com/yourhandle"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>WhatsApp</Label>
+                        <Input
                           value={customization.socialLinks.whatsapp}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            socialLinks: { ...customization.socialLinks, whatsapp: e.target.value }
-                          })}
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            socialLinks: { ...prev.socialLinks, whatsapp: e.target.value }
+                          }))}
                           placeholder="+1234567890"
                         />
                       </div>
@@ -683,161 +722,150 @@ export default function SellerSettingsPage() {
                   </div>
 
                   <div className="space-y-4 pt-4 border-t">
-                    <h3 className="font-medium text-gray-900">Contact Information</h3>
+                    <h4 className="font-medium text-gray-900">Contact Information</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="contactEmail">Contact Email</Label>
+                        <Label>Contact Email</Label>
                         <Input
-                          id="contactEmail"
                           type="email"
                           value={customization.contactInfo.email}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            contactInfo: { ...customization.contactInfo, email: e.target.value }
-                          })}
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            contactInfo: { ...prev.contactInfo, email: e.target.value }
+                          }))}
                           placeholder="sales@yourcompany.com"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="contactPhone">Contact Phone</Label>
+                        <Label>Contact Phone</Label>
                         <Input
-                          id="contactPhone"
                           value={customization.contactInfo.phone}
-                          onChange={(e) => setCustomization({
-                            ...customization,
-                            contactInfo: { ...customization.contactInfo, phone: e.target.value }
-                          })}
+                          onChange={(e) => setCustomization(prev => ({
+                            ...prev,
+                            contactInfo: { ...prev.contactInfo, phone: e.target.value }
+                          }))}
                           placeholder="+1 (555) 123-4567"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contactAddress">Business Address</Label>
+                      <Label>Business Address</Label>
                       <textarea
-                        id="contactAddress"
                         value={customization.contactInfo.address}
-                        onChange={(e) => setCustomization({
-                          ...customization,
-                          contactInfo: { ...customization.contactInfo, address: e.target.value }
-                        })}
-                        placeholder="123 Manufacturing District, Industrial City, Country"
+                        onChange={(e) => setCustomization(prev => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, address: e.target.value }
+                        }))}
+                        placeholder="123 Business St, City, Country"
                         className="w-full min-h-[80px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Business Hours</Label>
+                      <Input
+                        value={customization.contactInfo.businessHours || ''}
+                        onChange={(e) => setCustomization(prev => ({
+                          ...prev,
+                          contactInfo: { ...prev.contactInfo, businessHours: e.target.value }
+                        }))}
+                        placeholder="Mon-Fri: 9AM-5PM"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-4 pt-4 border-t">
-                    <h3 className="font-medium text-gray-900">About Us</h3>
+                    <h4 className="font-medium text-gray-900">About Us</h4>
                     <textarea
                       value={customization.aboutUs}
-                      onChange={(e) => setCustomization({
-                        ...customization,
+                      onChange={(e) => setCustomization(prev => ({
+                        ...prev,
                         aboutUs: e.target.value
-                      })}
-                      placeholder="Tell your story - your company history, manufacturing capabilities, certifications, and what makes you unique..."
+                      }))}
+                      placeholder="Tell your story..."
                       className="w-full min-h-[150px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
+                </div>
+              )}
 
-                  <div className="pt-4 border-t">
-                    <Button 
-                      onClick={handleSaveCustomization}
-                      disabled={saving}
-                      className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Contact Info
-                        </>
-                      )}
-                    </Button>
+              {/* Policies Tab */}
+              {activeTab === 'policies' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Store Policies</h3>
+                    <p className="text-sm text-gray-500">Set up your shipping, return, and privacy policies</p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Policies Tab */}
-            {activeTab === 'policies' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Store Policies</CardTitle>
-                  <CardDescription>
-                    Set up your shipping, return, and privacy policies
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="shippingPolicy">Shipping Policy</Label>
+                    <Label>Shipping Policy</Label>
                     <textarea
-                      id="shippingPolicy"
                       value={customization.policies.shipping}
-                      onChange={(e) => setCustomization({
-                        ...customization,
-                        policies: { ...customization.policies, shipping: e.target.value }
-                      })}
-                      placeholder="Describe your shipping terms, lead times, FOB/CIF options, minimum order quantities..."
+                      onChange={(e) => setCustomization(prev => ({
+                        ...prev,
+                        policies: { ...prev.policies, shipping: e.target.value }
+                      }))}
+                      placeholder="Describe your shipping terms..."
                       className="w-full min-h-[150px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="returnPolicy">Return & Refund Policy</Label>
+                    <Label>Return & Refund Policy</Label>
                     <textarea
-                      id="returnPolicy"
                       value={customization.policies.returns}
-                      onChange={(e) => setCustomization({
-                        ...customization,
-                        policies: { ...customization.policies, returns: e.target.value }
-                      })}
-                      placeholder="Describe your return conditions, quality guarantees, dispute resolution process..."
+                      onChange={(e) => setCustomization(prev => ({
+                        ...prev,
+                        policies: { ...prev.policies, returns: e.target.value }
+                      }))}
+                      placeholder="Describe your return conditions..."
                       className="w-full min-h-[150px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="privacyPolicy">Privacy Policy</Label>
+                    <Label>Privacy Policy</Label>
                     <textarea
-                      id="privacyPolicy"
                       value={customization.policies.privacy}
-                      onChange={(e) => setCustomization({
-                        ...customization,
-                        policies: { ...customization.policies, privacy: e.target.value }
-                      })}
-                      placeholder="Describe how you handle customer data, confidential information..."
+                      onChange={(e) => setCustomization(prev => ({
+                        ...prev,
+                        policies: { ...prev.policies, privacy: e.target.value }
+                      }))}
+                      placeholder="Describe how you handle customer data..."
                       className="w-full min-h-[150px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
 
-                  <div className="pt-4 border-t">
-                    <Button 
-                      onClick={handleSaveCustomization}
-                      disabled={saving}
-                      className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Policies
-                        </>
-                      )}
-                    </Button>
+                  <div className="space-y-2">
+                    <Label>Terms & Conditions</Label>
+                    <textarea
+                      value={customization.policies.terms || ''}
+                      onChange={(e) => setCustomization(prev => ({
+                        ...prev,
+                        policies: { ...prev.policies, terms: e.target.value }
+                      }))}
+                      placeholder="Your terms and conditions..."
+                      className="w-full min-h-[150px] px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Right Panel - Live Preview */}
+        {showPreview && (
+          <div className="lg:sticky lg:top-20 h-fit">
+            <LivePreview
+              customization={customization}
+              sellerName={businessName || seller.businessName}
+              sellerLogo={logo || seller.logo || undefined}
+              sellerBanner={banner || seller.banner || undefined}
+              sellerDescription={description || seller.description || undefined}
+              storeUrl={storeUrl}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
