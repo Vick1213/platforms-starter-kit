@@ -19,6 +19,7 @@ import {
 } from '@/lib/store-customization-types';
 import { ProductEnquiryClient } from './product-enquiry-client';
 import { ProductReviewsClient } from './product-reviews-client';
+import { AddToCartButton } from './add-to-cart-button';
 
 const sellerPortalUrl = getSellerPortalUrl();
 
@@ -262,8 +263,30 @@ export default async function ProductPage({
                 </div>
               </div>
 
-              {/* CTA Section - Contact Seller */}
-              <div className="space-y-3">
+              {/* CTA Section - Add to Cart and Contact Seller */}
+              <div className="space-y-4">
+                <AddToCartButton
+                  subdomain={subdomain}
+                  productId={product.id}
+                  productSlug={product.slug}
+                  productName={product.name}
+                  productImage={primaryImage}
+                  price={product.minPrice ?? 0}
+                  minOrderQuantity={product.moq || 1}
+                  primaryColor={customization.colors.primary}
+                />
+                
+                <div className="relative py-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" style={{ borderColor: customization.colors.border }} />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="px-2" style={{ backgroundColor: customization.colors.background, color: customization.colors.textMuted }}>
+                      or send an inquiry
+                    </span>
+                  </div>
+                </div>
+
                 <ProductEnquiryClient 
                   productId={product.id}
                   productName={product.name}
