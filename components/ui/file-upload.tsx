@@ -17,7 +17,7 @@ interface UploadResult {
 }
 
 interface FileUploadProps {
-  type: 'product' | 'store-logo' | 'store-banner' | 'avatar' | 'company-logo' | 'company-video';
+  type: 'product' | 'store-logo' | 'store-banner' | 'avatar' | 'company-logo' | 'company-video' | 'favicon';
   accept?: 'image' | 'video' | 'both';
   maxFiles?: number;
   onUpload?: (result: UploadResult) => void;

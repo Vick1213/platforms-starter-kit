@@ -46,10 +46,25 @@ export async function generateMetadata({
     };
   }
 
-  return {
+  // Fetch customization to get favicon
+  const rawCustomization = await getStoreCustomization(seller.id);
+  const customization = mergeWithDefaults(rawCustomization as Partial<StoreCustomization> | null);
+
+  const metadata: Metadata = {
     title: `${seller.businessName} | ${rootDomain}`,
-    description: seller.description || `Shop at ${seller.businessName} on ${rootDomain}`
+    description: seller.description || `Shop at ${seller.businessName} on ${rootDomain}`,
   };
+
+  // Add favicon if custom one is set
+  if (customization.favicon) {
+    metadata.icons = {
+      icon: customization.favicon,
+      shortcut: customization.favicon,
+      apple: customization.favicon,
+    };
+  }
+
+  return metadata;
 }
 
 export default async function StorePage({

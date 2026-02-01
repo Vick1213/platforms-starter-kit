@@ -68,6 +68,7 @@ export default function SellerSettingsPage() {
   const [businessPhone, setBusinessPhone] = useState('');
   const [description, setDescription] = useState('');
   const [logo, setLogo] = useState('');
+  const [favicon, setFavicon] = useState('');
   const [banner, setBanner] = useState('');
 
   useEffect(() => {
@@ -601,6 +602,40 @@ export default function SellerSettingsPage() {
                       )}
                       <p className="text-xs text-gray-500">Recommended: 1200x400px</p>
                     </div>
+                  </div>
+
+                  {/* Favicon Upload */}
+                  <div className="space-y-2">
+                    <Label>Store Favicon</Label>
+                    <p className="text-xs text-gray-500 mb-2">This icon appears in browser tabs when customers visit your store</p>
+                    {customization.favicon ? (
+                      <div className="space-y-2">
+                        <div className="relative w-16 h-16 border rounded-lg overflow-hidden bg-gray-50 group">
+                          <img src={customization.favicon} alt="Favicon preview" className="w-full h-full object-contain" />
+                          <button
+                            type="button"
+                            onClick={() => setCustomization({ ...customization, favicon: '' })}
+                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                          >
+                            <Trash2 className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <FileUpload
+                        type="favicon"
+                        accept="image"
+                        buttonText="Upload Favicon"
+                        showPreview={false}
+                        onUpload={(result) => {
+                          if (result.success && result.url) {
+                            setCustomization({ ...customization, favicon: result.url });
+                          }
+                        }}
+                        onError={(error) => setMessage({ type: 'error', text: error })}
+                      />
+                    )}
+                    <p className="text-xs text-gray-500">Recommended: 32x32px or 64x64px PNG/ICO</p>
                   </div>
 
                   {/* Store URL */}
