@@ -147,9 +147,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // Configure cookies for cross-subdomain authentication
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === 'production' 
-        ? '__Secure-authjs.session-token' 
-        : 'authjs.session-token',
+      name: 'authjs.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -162,9 +160,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     },
     callbackUrl: {
-      name: process.env.NODE_ENV === 'production'
-        ? '__Secure-authjs.callback-url'
-        : 'authjs.callback-url',
+      name: 'authjs.callback-url',
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -176,9 +172,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     },
     csrfToken: {
-      name: process.env.NODE_ENV === 'production'
-        ? '__Secure-authjs.csrf-token'
-        : 'authjs.csrf-token',
+      name: 'authjs.csrf-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
