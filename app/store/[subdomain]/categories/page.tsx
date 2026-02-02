@@ -144,7 +144,7 @@ export default function CategoriesPage() {
       <header className="border-b" style={{ borderColor: 'var(--store-primary)' }}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href={`/store/${subdomain}`} className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3">
               {customization.logo ? (
                 <Image
                   src={customization.logo}
@@ -170,7 +170,7 @@ export default function CategoriesPage() {
                 .map(item => (
                   <Link
                     key={item.id}
-                    href={item.id === 'home' ? `/store/${subdomain}` : `/store/${subdomain}${item.href}`}
+                    href={item.id === 'home' ? '/' : item.href}
                     className={`text-sm font-medium transition-colors hover:opacity-80 ${item.id === 'categories' ? 'font-bold' : ''}`}
                     style={{ color: item.id === 'categories' ? 'var(--store-primary)' : 'inherit' }}
                   >
@@ -181,7 +181,7 @@ export default function CategoriesPage() {
 
             <div className="flex items-center space-x-4">
               <Link
-                href={`/store/${subdomain}/cart`}
+                href="/cart"
                 className="p-2 rounded-full transition-colors"
                 style={{ backgroundColor: 'var(--store-primary)', color: 'white' }}
               >
@@ -198,7 +198,7 @@ export default function CategoriesPage() {
       <div className="bg-gray-50 py-3">
         <div className="max-w-7xl mx-auto px-4">
           <nav className="flex items-center text-sm">
-            <Link href={`/store/${subdomain}`} className="hover:underline" style={{ color: 'var(--store-primary)' }}>
+            <Link href="/" className="hover:underline" style={{ color: 'var(--store-primary)' }}>
               Home
             </Link>
             <span className="mx-2">/</span>
@@ -221,7 +221,7 @@ export default function CategoriesPage() {
             </div>
             <p className="text-gray-600">No categories available yet.</p>
             <Link
-              href={`/store/${subdomain}/products`}
+              href="/products"
               className="inline-block mt-4 px-6 py-2 rounded-lg text-white"
               style={{ backgroundColor: 'var(--store-primary)' }}
             >
@@ -233,7 +233,7 @@ export default function CategoriesPage() {
             {categories.map(category => (
               <Link
                 key={category.slug}
-                href={`/store/${subdomain}/products?category=${encodeURIComponent(category.name)}`}
+                href={`/products?category=${encodeURIComponent(category.name)}`}
                 className="group relative overflow-hidden rounded-xl border border-gray-200 transition-all hover:shadow-lg hover:border-transparent"
                 style={{ '--hover-border': 'var(--store-primary)' } as React.CSSProperties}
               >
@@ -284,7 +284,7 @@ export default function CategoriesPage() {
                 .map(product => (
                   <Link
                     key={product.id}
-                    href={`/store/${subdomain}/products/${product.slug}`}
+                    href={`/products/${product.slug}`}
                     className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                   >
                     <div className="aspect-square relative bg-gray-100">

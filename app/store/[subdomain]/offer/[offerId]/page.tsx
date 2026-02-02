@@ -132,7 +132,7 @@ export default function AcceptOfferPage() {
       
       // Redirect to order confirmation after a short delay
       setTimeout(() => {
-        router.push(`/store/${subdomain}/order-confirmation?orderId=${order.id}`);
+        router.push(`/order-confirmation?orderId=${order.id}`);
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept offer');
@@ -159,7 +159,7 @@ export default function AcceptOfferPage() {
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-xl font-semibold mb-2">Offer Not Found</h1>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Link href={`/store/${subdomain}`}>
+          <Link href="/">
             <Button>Return to Store</Button>
           </Link>
         </div>
@@ -175,7 +175,7 @@ export default function AcceptOfferPage() {
         {/* Header */}
         <div className="mb-6">
           <Link 
-            href={`/store/${subdomain}`}
+            href="/"
             className="inline-flex items-center text-sm text-gray-600 hover:text-orange-600 mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />

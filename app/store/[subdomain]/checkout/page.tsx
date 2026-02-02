@@ -68,7 +68,7 @@ export default function CheckoutPage() {
           const cartData = await cartRes.json();
           setCart(cartData);
           if (!cartData?.items?.length) {
-            router.push(`/store/${subdomain}/cart`);
+            router.push('/cart');
             return;
           }
         }
@@ -111,7 +111,7 @@ export default function CheckoutPage() {
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Failed to create order');
       const order = await res.json();
-      router.push(`/store/${subdomain}/order-confirmation?order=${order.orderNumber}`);
+      router.push(`/order-confirmation?order=${order.orderNumber}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create order');
       setSubmitting(false);
@@ -145,7 +145,7 @@ export default function CheckoutPage() {
       {/* Header */}
       <header className="bg-white border-b py-4">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <Link href={`/store/${subdomain}`} className="flex items-center space-x-3">
+          <Link href="/" className="flex items-center space-x-3">
             {customization.logo ? (
               <Image src={customization.logo} alt={seller?.name || 'Store'} width={40} height={40} className="object-contain" />
             ) : (
@@ -155,7 +155,7 @@ export default function CheckoutPage() {
             )}
             <span className="font-bold text-xl">{seller?.name || 'Store'}</span>
           </Link>
-          <Link href={`/store/${subdomain}/cart`} className="text-sm hover:underline" style={{ color: 'var(--store-primary)' }}>
+          <Link href="/cart" className="text-sm hover:underline" style={{ color: 'var(--store-primary)' }}>
             ← Return to Cart
           </Link>
         </div>

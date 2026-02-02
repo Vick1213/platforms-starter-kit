@@ -128,7 +128,7 @@ export default function InvoicePage() {
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-xl font-semibold mb-2">Invoice Not Found</h1>
           <p className="text-gray-600 mb-4">{error || 'Invoice could not be found'}</p>
-          <Link href={`/store/${subdomain}`}>
+          <Link href="/">
             <Button>Return to Store</Button>
           </Link>
         </div>
@@ -145,7 +145,7 @@ export default function InvoicePage() {
         {/* Header - Hidden in print */}
         <div className="mb-6 print:hidden">
           <Link 
-            href={`/store/${subdomain}`}
+            href="/"
             className="inline-flex items-center text-sm text-gray-600 hover:text-orange-600 mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />

@@ -66,7 +66,7 @@ export function AddToCartButton({
   };
 
   const goToCart = () => {
-    router.push(`/store/${subdomain}/cart`);
+    router.push('/cart');
   };
 
   return (

@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, MessageCircle, Search, Inbox, Send, Archive, 
-  MoreVertical, CheckCheck, Clock, Package, Loader2, Filter
+  MoreVertical, CheckCheck, Clock, Package, Loader2, Filter, DollarSign, X
 } from 'lucide-react';
 import { ChatWindow, ConversationList } from '@/components/chat';
 import { Conversation, ChatMessage } from '@/lib/chat-types';
+import { ChatOfferForm } from '@/components/chat/chat-offer-form';
 
 export default function SellerMessagesPage() {
   const { data: session, status } = useSession();
@@ -23,6 +24,8 @@ export default function SellerMessagesPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread' | 'archived'>('all');
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [sellerId, setSellerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -32,8 +35,21 @@ export default function SellerMessagesPage() {
 
     if (status === 'authenticated') {
       fetchConversations();
+      fetchSellerInfo();
     }
   }, [status, router]);
+
+  const fetchSellerInfo = async () => {
+    try {
+      const res = await fetch('/api/seller/profile');
+      if (res.ok) {
+        const data = await res.json();
+        setSellerId(data.id);
+      }
+    } catch (error) {
+      console.error('Error fetching seller info:', error);
+    }
+  };
 
   const fetchConversations = async () => {
     try {
@@ -237,6 +253,14 @@ export default function SellerMessagesPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button 
+                        onClick={() => setShowOfferForm(true)}
+                        className="bg-gradient-to-r from-orange-500 to-amber-500 text-white"
+                        size="sm"
+                      >
+                        <DollarSign className="w-4 h-4 mr-1" />
+                        Send Offer
+                      </Button>
                       <Button variant="outline" size="sm">
                         <Archive className="w-4 h-4 mr-1" />
                         Archive
@@ -246,6 +270,40 @@ export default function SellerMessagesPage() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Offer Form Modal */}
+                  {showOfferForm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
+                        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                          <h2 className="text-xl font-bold">Create Offer for {selectedConv.buyerName}</h2>
+                          <button 
+                            onClick={() => setShowOfferForm(false)}
+                            className="p-2 hover:bg-gray-100 rounded-full"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <div className="p-6">
+                          <ChatOfferForm
+                            conversationId={selectedConversation}
+                            initialProduct={selectedConv.initialProduct ? {
+                              productId: selectedConv.initialProduct.productId,
+                              productName: selectedConv.initialProduct.productName,
+                              productImage: selectedConv.initialProduct.productImage,
+                            } : undefined}
+                            buyerName={selectedConv.buyerName}
+                            onSuccess={(offer) => {
+                              setShowOfferForm(false);
+                              // Refresh messages to show the offer
+                              fetchMessages(selectedConversation);
+                            }}
+                            onCancel={() => setShowOfferForm(false)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Messages */}
                   {loadingMessages ? (

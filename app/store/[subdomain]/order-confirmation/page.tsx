@@ -109,7 +109,7 @@ function OrderConfirmationContent() {
       <header className="bg-white border-b" style={{ borderColor: 'var(--store-primary)' }}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href={`/store/${subdomain}`} className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3">
               {customization.logo ? (
                 <Image
                   src={customization.logo}
@@ -294,7 +294,7 @@ function OrderConfirmationContent() {
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                href={`/store/${subdomain}`}
+                href="/"
                 className="flex-1 text-center py-3 rounded-lg font-medium border"
                 style={{ borderColor: 'var(--store-primary)', color: 'var(--store-primary)' }}
               >
@@ -313,7 +313,7 @@ function OrderConfirmationContent() {
           <div className="text-center py-12">
             <p className="text-gray-600 mb-6">Order details not found. Please check your email for confirmation.</p>
             <Link
-              href={`/store/${subdomain}`}
+              href="/"
               className="inline-block px-8 py-3 rounded-lg text-white font-medium"
               style={{ backgroundColor: 'var(--store-primary)' }}
             >
@@ -328,7 +328,7 @@ function OrderConfirmationContent() {
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-600">
           <p>&copy; {new Date().getFullYear()} {seller?.name || 'Store'}. All rights reserved.</p>
           <p className="mt-2">
-            Questions about your order? <Link href={`/store/${subdomain}/contact`} className="underline" style={{ color: 'var(--store-primary)' }}>Contact us</Link>
+            Questions about your order? <Link href="/contact" className="underline" style={{ color: 'var(--store-primary)' }}>Contact us</Link>
           </p>
         </div>
       </footer>

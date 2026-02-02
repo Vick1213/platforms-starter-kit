@@ -161,7 +161,7 @@ export default function CartPage() {
       <header className="border-b" style={{ borderColor: 'var(--store-primary)' }}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href={`/store/${subdomain}`} className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3">
               {customization.logo ? (
                 <Image
                   src={customization.logo}
@@ -187,7 +187,7 @@ export default function CartPage() {
                 .map(item => (
                   <Link
                     key={item.id}
-                    href={item.id === 'home' ? `/store/${subdomain}` : `/store/${subdomain}${item.href}`}
+                    href={item.id === 'home' ? '/' : item.href}
                     className="text-sm font-medium transition-colors hover:opacity-80"
                   >
                     {item.label}
@@ -202,7 +202,7 @@ export default function CartPage() {
       <div className="bg-gray-50 py-3">
         <div className="max-w-7xl mx-auto px-4">
           <nav className="flex items-center text-sm">
-            <Link href={`/store/${subdomain}`} className="hover:underline" style={{ color: 'var(--store-primary)' }}>
+            <Link href="/" className="hover:underline" style={{ color: 'var(--store-primary)' }}>
               Home
             </Link>
             <span className="mx-2">/</span>
@@ -225,7 +225,7 @@ export default function CartPage() {
             <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
             <p className="text-gray-600 mb-6">Looks like you haven't added any items yet.</p>
             <Link
-              href={`/store/${subdomain}/products`}
+              href="/products"
               className="inline-block px-8 py-3 rounded-lg text-white font-medium"
               style={{ backgroundColor: 'var(--store-primary)' }}
             >
@@ -271,7 +271,7 @@ export default function CartPage() {
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
                         <Link
-                          href={`/store/${subdomain}/products/${item.productSlug || item.productId}`}
+                          href={`/products/${item.productSlug || item.productId}`}
                           className="font-medium hover:underline"
                         >
                           {item.name}
@@ -327,7 +327,7 @@ export default function CartPage() {
 
               {/* Continue Shopping */}
               <Link
-                href={`/store/${subdomain}/products`}
+                href="/products"
                 className="inline-flex items-center gap-2 mt-6 text-sm hover:underline"
                 style={{ color: 'var(--store-primary)' }}
               >
@@ -366,7 +366,7 @@ export default function CartPage() {
                 </div>
 
                 <Link
-                  href={`/store/${subdomain}/checkout`}
+                  href="/checkout"
                   className="block w-full text-center py-3 rounded-lg text-white font-medium transition-transform hover:scale-[1.02]"
                   style={{ backgroundColor: 'var(--store-primary)' }}
                 >

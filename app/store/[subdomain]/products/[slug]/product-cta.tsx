@@ -118,7 +118,7 @@ export function ProductCTA({
   };
 
   const goToCart = () => {
-    router.push(`/store/${subdomain}/cart`);
+    router.push('/cart');
   };
 
   // Enquiry-only mode
@@ -271,7 +271,7 @@ export function ProductCTA({
           <Button
             onClick={() => {
               handleAddToCart().then(() => {
-                router.push(`/store/${subdomain}/checkout`);
+                router.push('/checkout');
               });
             }}
             disabled={loading}
