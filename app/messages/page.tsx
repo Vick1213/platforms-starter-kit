@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Conversation, ChatMessage } from '@/lib/chat-types';
 
-export default function BuyerMessagesPage() {
+function BuyerMessagesContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -509,5 +509,17 @@ export default function BuyerMessagesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BuyerMessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+      </div>
+    }>
+      <BuyerMessagesContent />
+    </Suspense>
   );
 }
