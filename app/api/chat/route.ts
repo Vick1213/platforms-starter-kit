@@ -17,6 +17,7 @@ import {
   markMessagesAsRead,
   getTotalUnreadCount,
 } from '@/lib/chat-db';
+import { notifications, publishChatMessage } from '@/lib/ably-server';
 
 // GET /api/chat - Get user's conversations
 export async function GET(request: NextRequest) {
@@ -156,6 +157,42 @@ export async function POST(request: NextRequest) {
         quoteRequest,
         attachments,
       });
+
+      // Send real-time chat message
+      await publishChatMessage({
+        roomType: 'conversation',
+        roomId: conversationId,
+        message: content,
+        metadata: {
+          type: type || 'text',
+          senderType: isSeller ? 'seller' : 'user',
+          senderName: session.user.name || 'Anonymous',
+          productId: productContext?.productId,
+          productName: productContext?.productName,
+          productImage: productContext?.productImage,
+        },
+      });
+
+      // Notify the other party of the new message
+      if (isSeller) {
+        // Seller sent message, notify buyer
+        await notifications.newMessage(
+          undefined,
+          conversation.buyerId,
+          session.user.name || 'Seller',
+          content,
+          conversationId
+        );
+      } else {
+        // Buyer sent message, notify seller
+        await notifications.newMessage(
+          conversation.sellerId,
+          undefined,
+          session.user.name || 'Customer',
+          content,
+          conversationId
+        );
+      }
 
       return NextResponse.json({ message });
     }

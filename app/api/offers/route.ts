@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { generateOfferNumber, calculateOfferTotals } from '@/lib/offer-types';
+import { notifications, sendOfferToChat } from '@/lib/ably-server';
 
 // POST /api/offers - Create a new offer (seller only)
 export async function POST(request: NextRequest) {
@@ -112,6 +113,22 @@ export async function POST(request: NextRequest) {
         senderName: user.seller.businessName,
       },
     });
+
+    // Send real-time notifications
+    // Send offer as chat message
+    await sendOfferToChat(
+      inquiryId,
+      offer.id,
+      offer.offerNumber,
+      total,
+      user.seller.businessName
+    );
+    
+    // Notify buyer (if they're a registered user)
+    const buyer = await prisma.user.findUnique({ where: { email: inquiry.buyerEmail } });
+    if (buyer) {
+      await notifications.offerReceived(buyer.id, offer.offerNumber, user.seller.businessName, total, offer.id);
+    }
 
     return NextResponse.json(offer);
   } catch (error) {

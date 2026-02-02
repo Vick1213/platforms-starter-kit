@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { notifications, publishChatMessage } from '@/lib/ably-server';
 
 // POST /api/offers/[id]/decline - Decline an offer
 export async function POST(
@@ -41,6 +42,29 @@ export async function POST(
         message: `Offer ${offer.offerNumber} was declined.${reason ? ` Reason: ${reason}` : ''}`,
         senderType: 'buyer',
         senderName: offer.buyerName,
+      },
+    });
+
+    // Send real-time notifications
+    // Notify seller that offer was declined
+    await notifications.offerDeclined(
+      offer.sellerId,
+      offer.offerNumber,
+      offer.buyerName
+    );
+
+    // Send system message to chat
+    await publishChatMessage({
+      roomType: 'inquiry',
+      roomId: offer.inquiryId,
+      message: `Offer ${offer.offerNumber} was declined.${reason ? ` Reason: ${reason}` : ''}`,
+      metadata: {
+        type: 'system',
+        senderType: 'system',
+        senderName: 'System',
+        offerId: offer.id,
+        offerNumber: offer.offerNumber,
+        offerStatus: 'DECLINED',
       },
     });
 

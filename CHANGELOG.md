@@ -6,7 +6,99 @@
 
 ---
 
-## 🆕 Latest Update: Purchase Flow & Offer/Invoice System (February 1, 2026)
+## 🆕 Latest Update: Ably Real-time Chat & Notifications (February 1, 2026)
+
+### Overview
+Integrated Ably Chat SDK for real-time messaging between buyers and sellers. The chat now updates instantly without polling, includes typing indicators, presence (online/offline status), and a notification system. Offers sent through chat are delivered in real-time with accept/decline actions.
+
+### New Dependencies
+```json
+{
+  "@ably/chat": "^1.1.1",
+  "ably": "^2.17.1"
+}
+```
+
+### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `lib/ably.ts` | Ably client configuration, room naming conventions, message metadata types, notification templates |
+| `lib/ably-server.ts` | Server-side Ably client for publishing messages/notifications from API routes |
+| `app/api/ably/token/route.ts` | Token authentication endpoint for Ably - creates clientId based on user/seller, sets capabilities |
+| `components/ably-provider.tsx` | React context providers - AblyChatProvider, NotificationContext with hooks |
+| `components/chat/realtime-chat-window.tsx` | Full real-time chat component with messages, typing, presence, offer support |
+| `components/notification-bell.tsx` | Notification bell dropdown with unread count, icons, and browser notification support |
+
+### Key Features
+
+#### Real-time Messaging
+- **Instant message delivery** - Messages appear immediately via Ably Chat SDK
+- **Message history** - Previous messages loaded from Ably's 30-day retention
+- **Typing indicators** - Shows when other party is typing with animation
+- **Presence** - Online/offline status with green indicator dot
+
+#### Notification System
+- **In-app notifications** - Bell icon with unread count badge
+- **Browser notifications** - Native browser notifications with permission request
+- **Notification types**: new_inquiry, new_message, offer_sent, offer_received, offer_accepted, offer_declined, order_created, invoice_sent, payment_received
+
+#### Chat Room Types
+- `inquiry:{id}` - Product inquiry conversations
+- `conversation:{id}` - Direct buyer-seller conversations
+- `notifications:seller:{sellerId}` - Seller notification channel
+- `notifications:user:{userId}` - Buyer notification channel
+
+### API Updates
+
+#### Offers API (`app/api/offers/route.ts`)
+- Now sends real-time offer message to chat via `sendOfferToChat()`
+- Notifies buyer via `notifications.offerReceived()`
+
+#### Offer Accept (`app/api/offers/[id]/accept/route.ts`)
+- Sends `notifications.offerAccepted()` to seller
+- Sends `notifications.orderCreated()` to seller
+- Publishes system message to chat
+
+#### Offer Decline (`app/api/offers/[id]/decline/route.ts`)
+- Sends `notifications.offerDeclined()` to seller
+- Publishes system message to chat
+
+#### Chat API (`app/api/chat/route.ts`)
+- Now publishes messages via Ably for real-time delivery
+- Sends `notifications.newMessage()` to recipient
+
+#### Enquiry API (`app/api/chat/enquiry/route.ts`)
+- Sends `notifications.newInquiry()` to seller when product enquiry submitted
+
+### Environment Variables Required
+```env
+ABLY_API_KEY=your-ably-api-key
+```
+
+### Provider Integration
+Updated `app/providers.tsx` to wrap app with `AblyChatProvider` for real-time functionality.
+
+### Usage Example
+```tsx
+import { RealtimeChatWindow } from '@/components/chat/realtime-chat-window';
+
+<RealtimeChatWindow
+  roomType="inquiry"
+  roomId={inquiry.id}
+  sellerId={seller.id}
+  sellerName={seller.businessName}
+  buyerName={buyer.name}
+  currentUserType="buyer"
+  currentUserName={user.name}
+  primaryColor="#f97316"
+  onSendOffer={() => setShowOfferForm(true)}
+/>
+```
+
+---
+
+## Previous Update: Purchase Flow & Offer/Invoice System (February 1, 2026)
 
 ### Overview
 Implemented a comprehensive purchase flow with flexible product modes (direct purchase or inquiry-based), seller offer system, and invoicing. Products can now be configured by sellers to allow direct checkout, require quotes/offers, or both. Sellers can send formal offers through the inquiry chat, and buyers can accept offers to create orders with automatic invoice generation.

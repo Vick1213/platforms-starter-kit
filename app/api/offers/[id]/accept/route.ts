@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateOrderNumber } from '@/lib/cart-types';
 import { generateInvoiceNumber } from '@/lib/invoice-types';
+import { notifications, publishChatMessage } from '@/lib/ably-server';
 
 // POST /api/offers/[id]/accept - Accept an offer and create order
 export async function POST(
@@ -144,6 +145,39 @@ export async function POST(
         paymentTerms: offer.paymentTerms,
         status: 'SENT',
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      },
+    });
+
+    // Send real-time notifications
+    // Notify seller that offer was accepted
+    await notifications.offerAccepted(
+      offer.sellerId,
+      offer.offerNumber,
+      offer.buyerName,
+      order.id
+    );
+
+    // Notify seller of new order
+    await notifications.orderCreated(
+      offer.sellerId,
+      order.orderNumber,
+      offer.buyerName,
+      order.total,
+      order.id
+    );
+
+    // Send system message to chat
+    await publishChatMessage({
+      roomType: 'inquiry',
+      roomId: offer.inquiryId,
+      message: `Offer ${offer.offerNumber} accepted! Order ${order.orderNumber} created.`,
+      metadata: {
+        type: 'system',
+        senderType: 'system',
+        senderName: 'System',
+        offerId: offer.id,
+        offerNumber: offer.offerNumber,
+        offerStatus: 'ACCEPTED',
       },
     });
 

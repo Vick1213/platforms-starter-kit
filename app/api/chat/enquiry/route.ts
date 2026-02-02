@@ -12,6 +12,7 @@ import {
   sendMessage,
   createEnquiry,
 } from '@/lib/chat-db';
+import { notifications, publishChatMessage } from '@/lib/ably-server';
 
 // POST /api/chat/enquiry - Create a product enquiry
 export async function POST(request: NextRequest) {
@@ -109,7 +110,33 @@ export async function POST(request: NextRequest) {
           specifications: deliveryRequirements,
         } : undefined,
       });
+
+      // Send real-time chat message
+      await publishChatMessage({
+        roomType: 'conversation',
+        roomId: conversation.id,
+        message,
+        metadata: {
+          type: 'product-inquiry',
+          senderType: 'user',
+          senderName: session.user.name || buyerName,
+          productId,
+          productName,
+          productImage,
+        },
+      });
     }
+
+    // Notify seller of new inquiry
+    // enquiry has an id field added at runtime
+    const enquiryWithId = enquiry as typeof enquiry & { id: string };
+    await notifications.newInquiry(
+      sellerId,
+      enquiryWithId.id,
+      buyerName,
+      productName,
+      enquiryWithId.id
+    );
 
     return NextResponse.json({
       success: true,

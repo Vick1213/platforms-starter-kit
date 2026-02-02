@@ -2,6 +2,7 @@
 
 import { SessionProvider } from 'next-auth/react';
 import type { ReactNode } from 'react';
+import { AblyChatProvider } from '@/components/ably-provider';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -10,7 +11,9 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider>
-      {children}
+      <AblyChatProvider>
+        {children}
+      </AblyChatProvider>
     </SessionProvider>
   );
 }
