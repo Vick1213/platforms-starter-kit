@@ -96,6 +96,7 @@ export function ProductCTA({
           sellerId,
           productId,
           productName,
+          productImage,
           quantity,
           message: inquiryMessage,
           subject: `Inquiry about ${productName}`,
