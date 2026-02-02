@@ -159,9 +159,21 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url));
     }
 
-    // Rewrite root to store page
+    // Rewrite store subdomain paths to /store/[subdomain]/...
+    // Root path -> /store/[subdomain]
+    // /products -> /store/[subdomain]/products
+    // /products/slug -> /store/[subdomain]/products/slug
+    // /about, /contact, /cart, /categories -> /store/[subdomain]/...
     if (pathname === '/') {
       return NextResponse.rewrite(new URL(`/store/${subdomain}`, request.url), {
+        headers: requestHeaders,
+      });
+    }
+    
+    // Rewrite all other store paths (products, about, contact, cart, categories, etc.)
+    // Don't rewrite auth routes - those should work as-is
+    if (!pathname.startsWith('/auth') && !pathname.startsWith('/api')) {
+      return NextResponse.rewrite(new URL(`/store/${subdomain}${pathname}`, request.url), {
         headers: requestHeaders,
       });
     }
