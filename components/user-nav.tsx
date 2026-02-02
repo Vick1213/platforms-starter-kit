@@ -15,7 +15,6 @@ type UserNavProps = {
 };
 
 export function UserNav({ user }: UserNavProps) {
-  const router = useRouter();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
