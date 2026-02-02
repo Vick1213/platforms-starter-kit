@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -35,9 +34,8 @@ export function SellerDashboard({ seller, user, productCount = 0, products = [] 
   const [showSignOutOptions, setShowSignOutOptions] = useState(false);
 
   const handleFullSignOut = async () => {
-    await fetch('/api/auth/signout', { method: 'POST' });
-    await signOut({ redirect: false });
-    window.location.href = '/';
+    // Redirect to dedicated logout page which handles cross-subdomain cookie clearing
+    window.location.href = '/auth/logout';
   };
 
   const handleExitToMain = () => {

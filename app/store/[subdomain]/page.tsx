@@ -984,37 +984,40 @@ function ProductGrid({ products, customization }: ProductGridProps) {
   return (
     <div className={`grid ${columnsClass[customization.productGrid.columns]} gap-6`}>
       {products.slice(0, customization.productGrid.productsPerPage).map((product: any) => (
-        <Link
+        <div
           key={product.id}
-          href={`/products/${product.slug}`}
-          className="rounded-xl overflow-hidden shadow-sm border hover:shadow-md transition-shadow group"
+          className="rounded-xl overflow-hidden shadow-sm border hover:shadow-md transition-shadow group flex flex-col"
           style={{ backgroundColor: customization.colors.background, borderColor: customization.colors.border }}
         >
-          <div className={`${aspectRatioClass[customization.productGrid.imageAspectRatio]} relative bg-gray-100`}>
-            {product.images && product.images.length > 0 && product.images[0]?.url ? (
-              <img
-                src={product.images[0].url}
-                alt={product.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <ShoppingBag className="w-12 h-12" style={{ color: customization.colors.border }} />
-              </div>
-            )}
-            {product.status === 'ACTIVE' && (
-              <span 
-                className="absolute top-2 right-2 text-white text-xs px-2 py-1 rounded-full"
-                style={{ backgroundColor: '#22c55e' }}
-              >
-                In Stock
-              </span>
-            )}
-          </div>
-          <div className="p-4">
-            <h3 className="font-semibold store-text mb-1 truncate store-primary-hover">
-              {product.name}
-            </h3>
+          <Link href={`/products/${product.slug}`}>
+            <div className={`${aspectRatioClass[customization.productGrid.imageAspectRatio]} relative bg-gray-100`}>
+              {product.images && product.images.length > 0 && product.images[0]?.url ? (
+                <img
+                  src={product.images[0].url}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <ShoppingBag className="w-12 h-12" style={{ color: customization.colors.border }} />
+                </div>
+              )}
+              {product.status === 'ACTIVE' && (
+                <span 
+                  className="absolute top-2 right-2 text-white text-xs px-2 py-1 rounded-full"
+                  style={{ backgroundColor: '#22c55e' }}
+                >
+                  In Stock
+                </span>
+              )}
+            </div>
+          </Link>
+          <div className="p-4 flex-1 flex flex-col">
+            <Link href={`/products/${product.slug}`}>
+              <h3 className="font-semibold store-text mb-1 truncate store-primary-hover">
+                {product.name}
+              </h3>
+            </Link>
             {customization.productGrid.showPrice && (
               <p className="store-primary-text font-bold">
                 {product.minPrice != null && product.maxPrice != null
@@ -1038,8 +1041,20 @@ function ProductGrid({ products, customization }: ProductGridProps) {
                 <span className="text-xs store-text-muted">{product.rating.toFixed(1)}</span>
               </div>
             )}
+            {/* Action Button */}
+            <div className="mt-auto pt-3">
+              <Link href={`/products/${product.slug}`} className="block">
+                <Button 
+                  className="w-full store-gradient text-white text-sm"
+                  size="sm"
+                >
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  View Details
+                </Button>
+              </Link>
+            </div>
           </div>
-        </Link>
+        </div>
       ))}
     </div>
   );

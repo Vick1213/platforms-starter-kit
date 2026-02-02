@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Store, LogOut, ChevronDown, User, ShieldCheck } from 'lucide-react';
 import type { UserRole } from '@/lib/auth-config';
@@ -34,12 +32,8 @@ export function UserNav({ user }: UserNavProps) {
 
   const handleFullSignOut = async () => {
     setShowDropdown(false);
-    // Clear cookies via server-side API first (handles cross-subdomain cookies)
-    await fetch('/api/auth/signout', { method: 'POST' });
-    // Then call NextAuth signOut
-    await signOut({ redirect: false });
-    // Force full page reload to clear all state
-    window.location.href = '/';
+    // Redirect to dedicated logout page which handles cross-subdomain cookie clearing
+    window.location.href = '/auth/logout';
   };
 
   const handleSignOutToMain = () => {
@@ -77,7 +71,14 @@ export function UserNav({ user }: UserNavProps) {
       {/* Sign Out Dropdown */}
       <div className="relative" ref={dropdownRef}>
         <button 
-          onClick={() => setShowDropdown(!showDropdown)}
+          onClick={() => {
+            // For regular users, sign out directly without dropdown
+            if (!isSeller && !isAdmin) {
+              handleFullSignOut();
+            } else {
+              setShowDropdown(!showDropdown);
+            }
+          }}
           className="text-gray-600 hover:text-orange-600 cursor-pointer flex items-center gap-1"
         >
           Sign Out

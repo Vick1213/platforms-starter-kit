@@ -242,32 +242,35 @@ export default async function ProductsPage({
               }}
             >
               {filteredProducts.map((product) => (
-                <Link
+                <div
                   key={product.id}
-                  href={`/products/${product.slug}`}
-                  className="group bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-all"
+                  className="group bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-all flex flex-col"
                   style={{ borderColor: customization.colors.border }}
                 >
                   {/* Product Image */}
-                  <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                    {product.images?.[0]?.url ? (
-                      <img
-                        src={product.images[0].url}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-12 h-12 text-gray-300" />
-                      </div>
-                    )}
-                  </div>
+                  <Link href={`/products/${product.slug}`}>
+                    <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                      {product.images?.[0]?.url ? (
+                        <img
+                          src={product.images[0].url}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ShoppingBag className="w-12 h-12 text-gray-300" />
+                        </div>
+                      )}
+                    </div>
+                  </Link>
 
                   {/* Product Info */}
-                  <div className="p-4">
-                    <h3 className="font-semibold store-text group-hover:text-primary transition-colors line-clamp-2">
-                      {product.name}
-                    </h3>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <Link href={`/products/${product.slug}`}>
+                      <h3 className="font-semibold store-text group-hover:text-primary transition-colors line-clamp-2">
+                        {product.name}
+                      </h3>
+                    </Link>
                     
                     {customization.productGrid.showPrice && product.minPrice && (
                       <p className="mt-2 text-lg font-bold store-primary-text">
@@ -290,8 +293,21 @@ export default async function ProductsPage({
                         <span className="text-sm">{product.rating.toFixed(1)}</span>
                       </div>
                     )}
+
+                    {/* Action Button */}
+                    <div className="mt-auto pt-3">
+                      <Link href={`/products/${product.slug}`} className="block">
+                        <Button 
+                          className="w-full store-gradient text-white text-sm"
+                          size="sm"
+                        >
+                          <ShoppingBag className="w-4 h-4 mr-2" />
+                          View Details
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
