@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   X, Send, Paperclip, Image as ImageIcon, ChevronDown,
-  Loader2, MessageCircle, Package, Store, ExternalLink
+  Loader2, MessageCircle, Package, Store, ExternalLink,
+  FileText, DollarSign
 } from 'lucide-react';
 import { ChatMessage, Conversation } from '@/lib/chat-types';
+import { OfferCard } from '@/components/offer-card';
 
 interface ChatWindowProps {
   conversation: Conversation;
@@ -18,6 +20,7 @@ interface ChatWindowProps {
   onClose?: () => void;
   isLoading?: boolean;
   className?: string;
+  onOfferAction?: (offerId: string, action: 'accept' | 'decline') => Promise<void>;
 }
 
 export function ChatWindow({
@@ -29,6 +32,7 @@ export function ChatWindow({
   onClose,
   isLoading = false,
   className = '',
+  onOfferAction,
 }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -144,6 +148,8 @@ export function ChatWindow({
               key={message.id} 
               message={message}
               isOwn={message.senderId === currentUserId}
+              userType={userType}
+              onOfferAction={onOfferAction}
             />
           ))
         )}
@@ -182,13 +188,107 @@ export function ChatWindow({
 interface MessageBubbleProps {
   message: ChatMessage;
   isOwn: boolean;
+  userType: 'buyer' | 'seller';
+  onOfferAction?: (offerId: string, action: 'accept' | 'decline') => Promise<void>;
 }
 
-function MessageBubble({ message, isOwn }: MessageBubbleProps) {
+function MessageBubble({ message, isOwn, userType, onOfferAction }: MessageBubbleProps) {
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // Handle offer message type
+  if (message.type === 'offer' && message.offerContext) {
+    return (
+      <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+        <div className={`max-w-[90%] ${isOwn ? 'order-2' : 'order-1'}`}>
+          {/* Offer indicator */}
+          <div className={`flex items-center gap-2 mb-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <DollarSign className="w-4 h-4 text-green-600" />
+            <span className="text-xs font-medium text-green-600">
+              {isOwn ? 'Offer Sent' : 'Offer Received'}
+            </span>
+          </div>
+          
+          {/* Offer card preview */}
+          <div className={`p-4 rounded-lg border-2 ${
+            message.offerContext.status === 'PENDING' ? 'border-blue-300 bg-blue-50' :
+            message.offerContext.status === 'ACCEPTED' ? 'border-green-300 bg-green-50' :
+            message.offerContext.status === 'DECLINED' ? 'border-red-300 bg-red-50' :
+            'border-gray-300 bg-gray-50'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-semibold text-sm">
+                {message.offerContext.offerNumber}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                message.offerContext.status === 'PENDING' ? 'bg-blue-100 text-blue-700' :
+                message.offerContext.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                message.offerContext.status === 'DECLINED' ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {message.offerContext.status}
+              </span>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-2">
+              {message.offerContext.itemCount} item{message.offerContext.itemCount > 1 ? 's' : ''}
+            </p>
+            
+            <p className="text-lg font-bold text-green-600">
+              ${message.offerContext.total.toFixed(2)}
+            </p>
+            
+            {message.offerContext.validUntil && message.offerContext.status === 'PENDING' && (
+              <p className="text-xs text-gray-500 mt-2">
+                Valid until: {new Date(message.offerContext.validUntil).toLocaleDateString()}
+              </p>
+            )}
+            
+            {/* Action buttons for buyer when offer is pending */}
+            {userType === 'buyer' && message.offerContext.status === 'PENDING' && onOfferAction && (
+              <div className="flex gap-2 mt-3 pt-3 border-t">
+                <Button
+                  size="sm"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => onOfferAction(message.offerContext!.offerId, 'accept')}
+                >
+                  Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={() => onOfferAction(message.offerContext!.offerId, 'decline')}
+                >
+                  Decline
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {/* Optional message */}
+          {message.content && (
+            <div
+              className={`mt-2 px-4 py-2 rounded-2xl ${
+                isOwn
+                  ? 'bg-orange-500 text-white rounded-br-md'
+                  : 'bg-gray-100 text-gray-900 rounded-bl-md'
+              }`}
+            >
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            </div>
+          )}
+
+          {/* Timestamp */}
+          <p className={`text-xs mt-1 ${isOwn ? 'text-right' : 'text-left'} text-gray-400`}>
+            {formatTime(message.createdAt)}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>

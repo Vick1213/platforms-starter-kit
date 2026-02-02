@@ -6,7 +6,164 @@
 
 ---
 
-## 🆕 Latest Update: Shopping Cart & Checkout System (February 1, 2026)
+## 🆕 Latest Update: Purchase Flow & Offer/Invoice System (February 1, 2026)
+
+### Overview
+Implemented a comprehensive purchase flow with flexible product modes (direct purchase or inquiry-based), seller offer system, and invoicing. Products can now be configured by sellers to allow direct checkout, require quotes/offers, or both. Sellers can send formal offers through the inquiry chat, and buyers can accept offers to create orders with automatic invoice generation.
+
+### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `lib/offer-types.ts` | Type definitions for Offer, OfferItem, CreateOfferInput with helpers (generateOfferNumber, calculateOfferTotals, isOfferExpired) |
+| `lib/invoice-types.ts` | Type definitions for Invoice, InvoiceItem, InvoiceAddress with helpers (generateInvoiceNumber, getInvoiceStatusInfo) |
+| `app/api/offers/route.ts` | RESTful offers API - POST (create), GET (retrieve by id/number/inquiry/email) |
+| `app/api/offers/[id]/accept/route.ts` | Accept offer endpoint - creates Order + Invoice, updates inquiry status |
+| `app/api/offers/[id]/decline/route.ts` | Decline offer endpoint with optional reason, adds message to inquiry chat |
+| `app/api/invoices/route.ts` | RESTful invoices API - GET/POST/PATCH for invoice management |
+| `app/store/[subdomain]/products/[slug]/product-cta.tsx` | Conditional CTA component (Add to Cart vs Request Quote) based on purchaseMode |
+| `components/offer-card.tsx` | Display offers in chat with items, totals, terms, accept/decline buttons |
+| `components/offer-form.tsx` | Form for sellers to create and send offers in inquiry chat |
+| `app/store/[subdomain]/offer/[offerId]/page.tsx` | Full offer acceptance page with shipping form and order confirmation |
+| `app/store/[subdomain]/invoice/[invoiceId]/page.tsx` | Printable invoice view page with all details |
+
+### Prisma Schema Updates
+
+#### New Enums
+```prisma
+enum PurchaseMode {
+  DIRECT        // Direct checkout only
+  ENQUIRY_ONLY  // Must request quote
+  BOTH          // Both options available
+}
+
+enum OfferStatus {
+  PENDING, ACCEPTED, DECLINED, EXPIRED, WITHDRAWN
+}
+
+enum InvoiceStatus {
+  DRAFT, SENT, PAID, OVERDUE, CANCELLED, REFUNDED
+}
+```
+
+#### New Models
+- **Order** - Customer orders with items, addresses, totals, status
+- **OrderItem** - Line items for orders
+- **Offer** - Seller quotes with items, terms, expiration
+- **OfferItem** - Line items for offers with pricing
+- **Invoice** - Generated invoices with billing/shipping, due dates, payment status
+
+### Features Implemented
+
+#### Product Purchase Modes
+- ✅ **DIRECT** - Shows Add to Cart + Buy Now buttons
+- ✅ **ENQUIRY_ONLY** - Shows Request Quote form only
+- ✅ **BOTH** - Shows Add to Cart + optional "Request Custom Quote"
+
+#### Offer System
+- ✅ **Create Offers** - Sellers can create detailed quotes with multiple items
+- ✅ **Offer Details** - Product name, quantity, original/offered price, units, notes
+- ✅ **Pricing** - Subtotal, shipping, tax, discount, total calculations
+- ✅ **Terms** - Validity period, payment terms, shipping terms, delivery time
+- ✅ **Accept/Decline** - Buyers can accept (creates order) or decline (with reason)
+- ✅ **Expiration** - Offers auto-expire after validity period
+
+#### Invoice System
+- ✅ **Auto-Generation** - Invoice created when offer is accepted
+- ✅ **Invoice Numbers** - Format: INV-YYMM-XXXXX
+- ✅ **Billing/Shipping** - Full address support
+- ✅ **Status Tracking** - Draft, Sent, Paid, Overdue, Cancelled, Refunded
+- ✅ **Print View** - Clean printable invoice layout
+
+#### Chat Integration
+- ✅ **Offer Messages** - New 'offer' message type in chat
+- ✅ **Offer Cards** - Rich display of offers in chat with actions
+- ✅ **Accept/Decline Buttons** - Inline actions for buyers
+
+### Purchase Flow
+
+```
+Product Page
+    │
+    ├─── Direct Mode ──────► Add to Cart ──► Checkout ──► Order
+    │
+    └─── Enquiry Mode ──────► Send Inquiry ──► Chat with Seller
+                                                    │
+                                            Seller sends Offer
+                                                    │
+                                            Buyer views Offer
+                                                    │
+                              ┌─────────────────────┴────────────────────┐
+                              │                                          │
+                        Accept Offer                              Decline Offer
+                              │                                          │
+                     Enter Shipping Address                      (with reason)
+                              │
+                        Create Order + Invoice
+                              │
+                     Order Confirmation Page
+```
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/offers` | POST | Create offer (seller only) |
+| `/api/offers` | GET | Get offer by id/number/inquiry/email |
+| `/api/offers/[id]/accept` | POST | Accept offer, create order + invoice |
+| `/api/offers/[id]/decline` | POST | Decline offer with reason |
+| `/api/invoices` | GET | Get invoice by id/number/order/email |
+| `/api/invoices` | POST | Create invoice for order |
+| `/api/invoices` | PATCH | Update invoice status/payment |
+
+### Type Definitions
+
+```typescript
+// Offer
+interface Offer {
+  id: string;
+  offerNumber: string;  // QUO-TIMESTAMP-XXXX
+  sellerId: string;
+  inquiryId?: string;
+  buyerEmail: string;
+  status: OfferStatus;
+  items: OfferItem[];
+  subtotal: number;
+  shippingCost: number;
+  tax: number;
+  discount: number;
+  total: number;
+  validUntil?: Date;
+  paymentTerms?: string;
+  deliveryTime?: string;
+}
+
+// Invoice
+interface Invoice {
+  id: string;
+  invoiceNumber: string;  // INV-YYMM-XXXXX
+  status: InvoiceStatus;
+  sellerId: string;
+  orderId?: string;
+  buyerEmail: string;
+  items: InvoiceItem[];
+  total: number;
+  dueDate?: Date;
+  paidAt?: Date;
+}
+```
+
+### Migration Required
+Run the following to apply schema changes:
+```bash
+npx prisma db push
+# or
+npx prisma migrate dev --name add-offers-invoices
+```
+
+---
+
+## 🛒 Shopping Cart & Checkout System (February 1, 2026)
 
 ### Overview
 Added a complete e-commerce shopping cart and checkout system, along with missing store pages (products listing, categories, about, contact). Customers can now browse products, add items to cart, and complete a multi-step checkout process.

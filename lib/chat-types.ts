@@ -1,11 +1,21 @@
 // Chat & Messaging Types for Seller-Buyer Communication
 // Similar to Alibaba's enquiry system
 
-export type MessageType = 'text' | 'image' | 'product-inquiry' | 'quote-request' | 'order-related';
+export type MessageType = 'text' | 'image' | 'product-inquiry' | 'quote-request' | 'order-related' | 'offer';
 
 export type ConversationStatus = 'active' | 'archived' | 'spam';
 
 export type MessageStatus = 'sent' | 'delivered' | 'read';
+
+// Offer context for offer messages
+export interface OfferContext {
+  offerId: string;
+  offerNumber: string;
+  total: number;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'WITHDRAWN';
+  validUntil?: string;
+  itemCount: number;
+}
 
 // Individual message in a conversation
 export interface ChatMessage {
@@ -32,6 +42,8 @@ export interface ChatMessage {
     deliveryDate?: string;
     specifications?: string;
   };
+  // Offer context if message is about an offer
+  offerContext?: OfferContext;
   status: MessageStatus;
   createdAt: string;
   readAt?: string;

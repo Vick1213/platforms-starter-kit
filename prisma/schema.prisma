@@ -51,6 +51,29 @@ enum InquiryStatus {
   CANCELLED
 }
 
+enum PurchaseMode {
+  DIRECT        // User can add to cart and checkout directly
+  ENQUIRY_ONLY  // User must enquire first, seller sends offer
+  BOTH          // Both options available
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -103,6 +126,7 @@ model User {
   seller          Seller?
   inquiries       Inquiry[]
   reviews         SupplierReview[]
+  orders          Order[]
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -316,6 +340,9 @@ model Product {
   currency          String   @default("USD")
   priceUnit         String?
   pricingTiers      PricingTier[]
+  
+  // Purchase Mode - determines how customers can buy
+  purchaseMode      PurchaseMode @default(BOTH)
   
   // MOQ & Supply
   moq               Int?
@@ -640,6 +667,7 @@ model Inquiry {
   company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   products        InquiryProduct[]
   messages        InquiryMessage[]
+  offers          Offer[]
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -797,6 +825,11 @@ model Seller {
   currency        String   @default("USD")
   returnPolicy    String?  @db.Text
   autoApprove     Boolean  @default(false)
+  
+  // Relations
+  orders          Order[]
+  offers          Offer[]
+  invoices        Invoice[]
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1014,4 +1047,242 @@ model SavedSupplier {
   
   @@unique([userId, companyId])
   @@index([userId])
+}
+
+// ============================================
+// ORDERS
+// ============================================
+
+model Order {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique
+  
+  // Seller
+  sellerId        String
+  seller          Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  
+  // Customer (can be guest or registered user)
+  customerId      String?
+  customer        User?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerEmail   String
+  customerName    String
+  customerPhone   String?
+  
+  // Items
+  items           OrderItem[]
+  
+  // Totals
+  subtotal        Float
+  shippingCost    Float    @default(0)
+  tax             Float    @default(0)
+  discount        Float    @default(0)
+  total           Float
+  
+  // Addresses (stored as JSON for flexibility)
+  shippingAddress Json
+  billingAddress  Json?
+  
+  // Payment
+  paymentMethod   String
+  paymentStatus   String   @default("pending")
+  paymentId       String?
+  paidAt          DateTime?
+  
+  // Status
+  status          OrderStatus @default(PENDING)
+  
+  // Notes
+  customerNotes   String?  @db.Text
+  sellerNotes     String?  @db.Text
+  
+  // Tracking
+  trackingNumber  String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  
+  // Related offer (if order came from accepted offer)
+  offerId         String?  @unique
+  offer           Offer?   @relation(fields: [offerId], references: [id])
+  
+  // Invoices
+  invoices        Invoice[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([sellerId])
+  @@index([customerId])
+  @@index([customerEmail])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId       String
+  productName     String
+  productSlug     String
+  productImage    String?
+  
+  quantity        Int
+  unitPrice       Float
+  subtotal        Float
+  
+  // Unit info
+  unit            String?
+  
+  // Negotiated price info (if from offer)
+  originalPrice   Float?
+  discountPercent Float?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ============================================
+// OFFERS (Seller quotes sent via inquiry chat)
+// ============================================
+
+model Offer {
+  id              String   @id @default(cuid())
+  offerNumber     String   @unique
+  
+  // Related inquiry
+  inquiryId       String
+  inquiry         Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  
+  // Seller
+  sellerId        String
+  seller          Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  
+  // Buyer
+  buyerEmail      String
+  buyerName       String
+  
+  // Offer details
+  items           OfferItem[]
+  
+  subtotal        Float
+  shippingCost    Float?
+  tax             Float?
+  discount        Float?
+  total           Float
+  
+  // Terms
+  validUntil      DateTime
+  paymentTerms    String?
+  shippingTerms   String?
+  deliveryTime    String?
+  notes           String?  @db.Text
+  
+  // Status
+  status          OfferStatus @default(PENDING)
+  
+  // Response
+  acceptedAt      DateTime?
+  declinedAt      DateTime?
+  declineReason   String?
+  
+  // Resulting order
+  order           Order?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([inquiryId])
+  @@index([sellerId])
+  @@index([buyerEmail])
+  @@index([status])
+}
+
+model OfferItem {
+  id              String   @id @default(cuid())
+  
+  offerId         String
+  offer           Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  productId       String
+  productName     String
+  productSlug     String
+  productImage    String?
+  
+  quantity        Int
+  originalPrice   Float?
+  offeredPrice    Float
+  subtotal        Float
+  
+  unit            String?
+  notes           String?
+  
+  @@index([offerId])
+}
+
+// ============================================
+// INVOICES
+// ============================================
+
+model Invoice {
+  id              String   @id @default(cuid())
+  invoiceNumber   String   @unique
+  
+  // Related order
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  // Seller
+  sellerId        String
+  seller          Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  
+  // Customer info (snapshot at invoice creation)
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  customerCompany String?
+  customerAddress Json
+  
+  // Seller info (snapshot at invoice creation)
+  sellerName      String
+  sellerEmail     String
+  sellerPhone     String?
+  sellerAddress   Json?
+  
+  // Items (snapshot)
+  items           Json
+  
+  // Totals
+  subtotal        Float
+  shippingCost    Float    @default(0)
+  tax             Float    @default(0)
+  discount        Float    @default(0)
+  total           Float
+  
+  // Payment info
+  paymentMethod   String?
+  paymentTerms    String?
+  dueDate         DateTime?
+  paidAmount      Float    @default(0)
+  paidAt          DateTime?
+  
+  // Status
+  status          InvoiceStatus @default(DRAFT)
+  
+  // Notes
+  notes           String?  @db.Text
+  
+  // PDF storage
+  pdfUrl          String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([orderId])
+  @@index([sellerId])
+  @@index([customerEmail])
+  @@index([status])
 }
