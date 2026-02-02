@@ -169,9 +169,20 @@ export function ProductCTA({
           </div>
 
           {inquirySent ? (
-            <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-              <Check className="w-5 h-5" />
-              <span>Inquiry sent! The seller will contact you soon.</span>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
+                <Check className="w-5 h-5" />
+                <span>Inquiry sent! The seller will respond soon.</span>
+              </div>
+              <a
+                href="https://supplyme.asia/messages"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center py-2 px-4 rounded-lg border text-sm font-medium transition-colors hover:bg-gray-50"
+                style={{ borderColor: primaryColor, color: primaryColor }}
+              >
+                View Messages →
+              </a>
             </div>
           ) : (
             <>
@@ -311,9 +322,20 @@ export function ProductCTA({
           {showInquiryForm ? (
             <div className="p-4 border rounded-lg" style={{ borderColor: '#e5e7eb' }}>
               {inquirySent ? (
-                <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-                  <Check className="w-5 h-5" />
-                  <span>Inquiry sent! The seller will send you an offer.</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
+                    <Check className="w-5 h-5" />
+                    <span>Inquiry sent! The seller will send you an offer.</span>
+                  </div>
+                  <a
+                    href="https://supplyme.asia/messages"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center py-2 px-4 rounded-lg border text-sm font-medium transition-colors hover:bg-gray-50"
+                    style={{ borderColor: primaryColor, color: primaryColor }}
+                  >
+                    View Messages →
+                  </a>
                 </div>
               ) : (
                 <>

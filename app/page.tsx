@@ -5,7 +5,7 @@ import { rootDomain, buildSubdomainUrl, isVercelPreview, getSellerPortalUrl } fr
 import { 
   ShoppingBag, Search, User, ShoppingCart, ChevronRight, 
   Store, TrendingUp, Shield, Truck, Star, ArrowRight,
-  Factory, Globe, Ship, Package, Calculator, MapPin
+  Factory, Globe, Ship, Package, Calculator, MapPin, MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserNav } from '@/components/user-nav';
@@ -85,6 +85,12 @@ export default async function HomePage() {
 
             {/* Right Icons */}
             <div className="flex items-center gap-4">
+              {session && (
+                <Link href="/messages" className="flex flex-col items-center text-gray-600 hover:text-orange-600 relative">
+                  <MessageCircle className="w-6 h-6" />
+                  <span className="text-xs mt-1 hidden md:block">Messages</span>
+                </Link>
+              )}
               <Link href={session ? '/account' : '/auth/login'} className="flex flex-col items-center text-gray-600 hover:text-orange-600">
                 <User className="w-6 h-6" />
                 <span className="text-xs mt-1 hidden md:block">Account</span>

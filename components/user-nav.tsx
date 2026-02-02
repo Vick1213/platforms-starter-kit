@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Store, LogOut, ChevronDown, User, ShieldCheck } from 'lucide-react';
+import { Store, LogOut, ChevronDown, User, ShieldCheck, MessageCircle } from 'lucide-react';
 import type { UserRole } from '@/lib/auth-config';
 import { getSellerPortalUrl, getMainSiteUrl } from '@/lib/utils';
 
@@ -16,7 +16,30 @@ type UserNavProps = {
 
 export function UserNav({ user }: UserNavProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch unread message count
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      // Poll for updates every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await fetch('/api/chat?role=buyer');
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadMessages(data.unreadCount || 0);
+      }
+    } catch (error) {
+      // Silently fail - user might not have chat access
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -60,6 +83,21 @@ export function UserNav({ user }: UserNavProps) {
   return (
     <div className="flex items-center gap-4">
       <span className="text-gray-600">Hi, {user.name?.split(' ')[0] || 'User'}</span>
+      
+      {/* Messages Link */}
+      <Link 
+        href="/messages" 
+        className="text-gray-600 hover:text-orange-600 flex items-center gap-1 relative"
+      >
+        <MessageCircle className="w-4 h-4" />
+        <span className="hidden md:inline">Messages</span>
+        {unreadMessages > 0 && (
+          <span className="absolute -top-1 -right-1 md:-top-1 md:-right-2 w-4 h-4 bg-orange-500 text-white text-[10px] rounded-full flex items-center justify-center">
+            {unreadMessages > 9 ? '9+' : unreadMessages}
+          </span>
+        )}
+      </Link>
+
       {isSeller && (
         <a href={getSellerPortalUrl()} className="text-orange-600 hover:underline font-medium flex items-center gap-1">
           <Store className="w-4 h-4" />

@@ -177,14 +177,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     csrfToken: {
       name: process.env.NODE_ENV === 'production'
-        ? '__Host-authjs.csrf-token'
+        ? '__Secure-authjs.csrf-token'
         : 'authjs.csrf-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        // CSRF token uses __Host- prefix which requires no domain
+        // Use root domain for cross-subdomain CSRF token sharing
+        domain: process.env.NODE_ENV === 'production'
+          ? '.supplyme.asia'
+          : undefined,
       },
     },
   },
