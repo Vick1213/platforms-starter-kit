@@ -19,11 +19,11 @@ export default async function HomePage() {
   const approvedSellers = sellers.filter(s => s.status === 'approved');
 
   const categories = [
-    { name: 'Electronics', icon: Factory, color: 'from-blue-500 to-cyan-500' },
-    { name: 'Textiles', icon: Package, color: 'from-pink-500 to-rose-500' },
-    { name: 'Machinery', icon: Factory, color: 'from-green-500 to-emerald-500' },
-    { name: 'Raw Materials', icon: Package, color: 'from-purple-500 to-violet-500' },
-    { name: 'Consumer Goods', icon: ShoppingBag, color: 'from-amber-500 to-orange-500' },
+    { name: 'Electronics', slug: 'electronics', icon: Factory, color: 'from-blue-500 to-cyan-500' },
+    { name: 'Textiles', slug: 'textiles', icon: Package, color: 'from-pink-500 to-rose-500' },
+    { name: 'Machinery', slug: 'machinery', icon: Factory, color: 'from-green-500 to-emerald-500' },
+    { name: 'Raw Materials', slug: 'raw-materials', icon: Package, color: 'from-purple-500 to-violet-500' },
+    { name: 'Consumer Goods', slug: 'consumer-goods', icon: ShoppingBag, color: 'from-amber-500 to-orange-500' },
   ];
 
   const features = [
@@ -70,14 +70,14 @@ export default async function HomePage() {
 
             {/* Search Bar */}
             <div className="flex-1 max-w-2xl">
-              <div className="relative flex">
+              <div className="relative flex items-stretch">
                 <input
                   type="text"
                   placeholder="Search manufacturers, products, or categories..."
                   className="w-full px-4 py-3 pl-12 border-2 border-gray-200 rounded-l-lg focus:outline-none focus:border-orange-500 text-sm"
                 />
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Button className="rounded-l-none bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-6">
+                <Button className="rounded-l-none rounded-r-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-6 h-auto">
                   Search
                 </Button>
               </div>
@@ -109,8 +109,8 @@ export default async function HomePage() {
           <nav className="flex items-center gap-8 py-3 overflow-x-auto">
             {categories.map((cat) => (
               <Link 
-                key={cat.name} 
-                href={`/category/${cat.name.toLowerCase().replace(/ & /g, '-')}`}
+                key={cat.slug} 
+                href={`/category/${cat.slug}`}
                 className="flex items-center gap-2 text-gray-600 hover:text-orange-600 whitespace-nowrap text-sm font-medium"
               >
                 <cat.icon className="w-4 h-4" />
@@ -179,8 +179,8 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {categories.map((cat) => (
             <Link 
-              key={cat.name}
-              href={`/category/${cat.name.toLowerCase().replace(/ & /g, '-')}`}
+              key={cat.slug}
+              href={`/category/${cat.slug}`}
               className="group"
             >
               <div className={`bg-gradient-to-br ${cat.color} rounded-2xl p-6 text-center transition-transform group-hover:scale-105`}>

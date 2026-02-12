@@ -690,3 +690,186 @@ export async function getCachedSearchResults(query: string, type: 'products' | '
   const key = `cache:search:${type}:${Buffer.from(query).toString('base64')}`;
   return redis.get<any[]>(key);
 }
+
+// ============================================
+// CATEGORY FUNCTIONS
+// ============================================
+
+export async function getAllCategories() {
+  try {
+    const categories = await prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { position: 'asc' },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+        children: {
+          where: { isActive: true },
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
+    return categories;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
+}
+
+export async function getCategoryBySlug(slug: string) {
+  try {
+    const category = await prisma.category.findUnique({
+      where: { slug },
+      include: {
+        children: {
+          where: { isActive: true },
+          orderBy: { position: 'asc' },
+          include: {
+            _count: { select: { products: true } },
+          },
+        },
+        parent: true,
+        _count: { select: { products: true } },
+      },
+    });
+    return category;
+  } catch (error) {
+    console.error('Error fetching category by slug:', error);
+    return null;
+  }
+}
+
+export async function getProductsByCategory(categorySlug: string, options?: {
+  page?: number;
+  limit?: number;
+  sortBy?: 'newest' | 'price-low' | 'price-high' | 'popular';
+}) {
+  const page = options?.page ?? 1;
+  const limit = options?.limit ?? 20;
+  const skip = (page - 1) * limit;
+
+  try {
+    const category = await prisma.category.findUnique({
+      where: { slug: categorySlug },
+      select: { id: true },
+    });
+
+    if (!category) return { products: [], total: 0 };
+
+    // Build sort order
+    let orderBy: Record<string, string> = { createdAt: 'desc' };
+    switch (options?.sortBy) {
+      case 'price-low': orderBy = { minPrice: 'asc' }; break;
+      case 'price-high': orderBy = { minPrice: 'desc' }; break;
+      case 'popular': orderBy = { viewCount: 'desc' }; break;
+    }
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          categoryId: category.id,
+          status: 'ACTIVE',
+        },
+        include: {
+          company: {
+            select: {
+              name: true,
+              slug: true,
+              country: true,
+              verificationStatus: true,
+              seller: {
+                select: {
+                  subdomain: true,
+                },
+              },
+            },
+          },
+          images: {
+            orderBy: { position: 'asc' },
+            take: 1,
+          },
+          category: {
+            select: { name: true, slug: true },
+          },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.product.count({
+        where: {
+          categoryId: category.id,
+          status: 'ACTIVE',
+        },
+      }),
+    ]);
+
+    return { products, total };
+  } catch (error) {
+    console.error('Error fetching products by category:', error);
+    return { products: [], total: 0 };
+  }
+}
+
+export async function getCompaniesByCategory(categorySlug: string) {
+  try {
+    const category = await prisma.category.findUnique({
+      where: { slug: categorySlug },
+      select: { id: true },
+    });
+
+    if (!category) return [];
+
+    const companies = await prisma.company.findMany({
+      where: {
+        isActive: true,
+        products: {
+          some: {
+            categoryId: category.id,
+            status: 'ACTIVE',
+          },
+        },
+      },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+        seller: {
+          select: { subdomain: true },
+        },
+      },
+      orderBy: { overallRating: 'desc' },
+      take: 50,
+    });
+
+    return companies;
+  } catch (error) {
+    console.error('Error fetching companies by category:', error);
+    return [];
+  }
+}
+
+export async function getTopLevelCategories() {
+  try {
+    const categories = await prisma.category.findMany({
+      where: {
+        isActive: true,
+        parentId: null,
+      },
+      orderBy: { position: 'asc' },
+      include: {
+        _count: { select: { products: true } },
+        children: {
+          where: { isActive: true },
+          orderBy: { position: 'asc' },
+          select: { id: true, name: true, slug: true, productCount: true },
+        },
+      },
+    });
+    return categories;
+  } catch (error) {
+    console.error('Error fetching top-level categories:', error);
+    return [];
+  }
+}
