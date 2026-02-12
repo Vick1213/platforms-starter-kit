@@ -6,6 +6,7 @@ import { protocol, rootDomain, getMainSiteUrl, getSellerPortalUrl } from '@/lib/
 import { ShoppingBag, Star, Shield, Truck, MessageCircle, Globe, Facebook, Instagram, Linkedin, Twitter, ChevronDown, Menu, X, Play, Mail, Phone, MapPin, Clock, Youtube, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StoreOwnerCheck } from '@/components/store-owner-check';
+import { StoreAuthNav } from '@/components/store-auth-nav';
 import { SessionProvider } from 'next-auth/react';
 import { 
   StoreCustomization,
@@ -239,10 +240,7 @@ export default async function StorePage({
                       Free shipping on orders over $50
                     </span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <Link href="/auth/login" className="hover:opacity-80">Sign In</Link>
-                    <Link href="/auth/register" className="hover:opacity-80">Register</Link>
-                  </div>
+                  <StoreAuthNav />
                 </div>
                 
                 {/* Main Header */}

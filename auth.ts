@@ -156,7 +156,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Use root domain for cross-subdomain cookie sharing
         domain: process.env.NODE_ENV === 'production' 
           ? '.supplyme.asia' 
-          : undefined,
+          : '.localhost',
       },
     },
     callbackUrl: {
@@ -168,17 +168,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         secure: process.env.NODE_ENV === 'production',
         domain: process.env.NODE_ENV === 'production'
           ? '.supplyme.asia'
-          : undefined,
+          : '.localhost',
       },
     },
     csrfToken: {
-      name: 'authjs.csrf-token',
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-authjs.csrf-token'
+        : 'authjs.csrf-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        // Use root domain for cross-subdomain CSRF token sharing
         domain: process.env.NODE_ENV === 'production'
           ? '.supplyme.asia'
           : undefined,
