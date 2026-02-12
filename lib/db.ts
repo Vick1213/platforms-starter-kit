@@ -289,6 +289,24 @@ export async function createSeller(data: {
   description?: string;
   subdomain: string;
   customDomain?: string;
+  // Company fields
+  businessType?: string;
+  yearEstablished?: number;
+  employeeCount?: string;
+  annualRevenue?: string;
+  registrationNumber?: string;
+  website?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  address?: string;
+  postalCode?: string;
+  factoryAddress?: string;
+  factorySize?: string;
+  nearestPort?: string;
+  mainMarkets?: string[];
+  certifications?: string[];
+  mainProducts?: string;
 }): Promise<AppSeller> {
   const seller = await prisma.seller.create({
     data: {
@@ -301,6 +319,49 @@ export async function createSeller(data: {
       customDomain: data.customDomain?.toLowerCase() || null,
     },
   });
+
+  // Create linked Company profile
+  const companySlug = data.subdomain.toLowerCase();
+  try {
+    await prisma.company.create({
+      data: {
+        name: data.businessName,
+        slug: companySlug,
+        description: data.description || null,
+        shortDescription: data.mainProducts || null,
+        businessType: (data.businessType as any) || 'MANUFACTURER',
+        yearEstablished: data.yearEstablished || null,
+        employeeCount: data.employeeCount || null,
+        annualRevenue: data.annualRevenue || null,
+        registrationNumber: data.registrationNumber || null,
+        website: data.website || null,
+        email: data.businessEmail,
+        phone: data.businessPhone || null,
+        address: data.address || null,
+        city: data.city || null,
+        state: data.state || null,
+        country: data.country || null,
+        postalCode: data.postalCode || null,
+        factoryAddress: data.factoryAddress || null,
+        factorySize: data.factorySize || null,
+        nearestPort: data.nearestPort || null,
+        mainMarkets: data.mainMarkets || [],
+        sellerId: seller.id,
+        memberSince: new Date(),
+        certifications: data.certifications && data.certifications.length > 0 && data.certifications[0] !== 'None'
+          ? {
+              create: data.certifications.map(cert => ({
+                name: cert,
+                type: 'INDUSTRY',
+              })),
+            }
+          : undefined,
+      },
+    });
+  } catch (companyError) {
+    console.error('Failed to create company profile:', companyError);
+    // Seller was still created — company can be added later
+  }
 
   // Update user role to SELLER
   await prisma.user.update({

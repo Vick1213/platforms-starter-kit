@@ -5,22 +5,50 @@ import { UserRole, isReservedSubdomain } from '@/lib/auth-config';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      name, 
-      email, 
-      password, 
-      businessName, 
-      businessEmail, 
-      businessPhone, 
-      subdomain, 
+    const {
+      // Step 1 – Account
+      name,
+      email,
+      password,
+      // Step 2 – Company
+      businessName,
+      businessEmail,
+      businessPhone,
+      businessType,
+      yearEstablished,
+      employeeCount,
+      annualRevenue,
+      registrationNumber,
+      description,
+      website,
+      // Step 3 – Location & Trade
+      country,
+      state,
+      city,
+      address,
+      postalCode,
+      factoryAddress,
+      factorySize,
+      nearestPort,
+      mainMarkets,
+      certifications,
+      // Step 4 – Storefront
+      subdomain,
       customDomain,
-      description 
+      mainProducts,
     } = body;
 
     // Validate required fields
     if (!name || !email || !password || !businessName || !businessEmail || !subdomain) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    if (!country || !city) {
+      return NextResponse.json(
+        { error: 'Country and city are required' },
         { status: 400 }
       );
     }
@@ -75,7 +103,7 @@ export async function POST(request: NextRequest) {
       role: UserRole.SELLER,
     });
 
-    // Create seller profile
+    // Create seller profile + linked company
     const seller = await createSeller({
       userId: user.id,
       businessName,
@@ -84,6 +112,24 @@ export async function POST(request: NextRequest) {
       description,
       subdomain: sanitizedSubdomain,
       customDomain: customDomain || undefined,
+      // Company fields
+      businessType,
+      yearEstablished: yearEstablished ? parseInt(yearEstablished, 10) : undefined,
+      employeeCount,
+      annualRevenue,
+      registrationNumber,
+      website,
+      country,
+      state,
+      city,
+      address,
+      postalCode,
+      factoryAddress,
+      factorySize,
+      nearestPort,
+      mainMarkets: Array.isArray(mainMarkets) ? mainMarkets : [],
+      certifications: Array.isArray(certifications) ? certifications : [],
+      mainProducts,
     });
 
     return NextResponse.json({
