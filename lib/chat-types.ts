@@ -64,6 +64,7 @@ export interface Conversation {
   sellerName: string;
   sellerLogo?: string;
   sellerSubdomain: string;
+  inquiryId?: string;
   buyerId: string;
   buyerName: string;
   buyerEmail: string;

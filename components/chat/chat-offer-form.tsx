@@ -20,6 +20,7 @@ interface OfferItem {
 
 interface ChatOfferFormProps {
   conversationId: string;
+  inquiryId?: string;
   initialProduct?: {
     productId: string;
     productName: string;
@@ -32,6 +33,7 @@ interface ChatOfferFormProps {
 
 export function ChatOfferForm({
   conversationId,
+  inquiryId,
   initialProduct,
   buyerName = 'Customer',
   onSuccess,
@@ -103,6 +105,7 @@ export function ChatOfferForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversationId,
+          inquiryId,
           items: validItems,
           shippingCost,
           tax,

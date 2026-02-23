@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
             sellerName: seller.businessName,
             sellerLogo: seller.logo || undefined,
             sellerSubdomain: seller.subdomain,
+            inquiryId: inquiryId || undefined,
             buyerId: session.user.id,
             buyerName: session.user.name || 'Anonymous',
             buyerEmail: session.user.email || '',

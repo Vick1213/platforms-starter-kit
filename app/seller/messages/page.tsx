@@ -287,6 +287,7 @@ export default function SellerMessagesPage() {
                         <div className="p-6">
                           <ChatOfferForm
                             conversationId={selectedConversation}
+                            inquiryId={selectedConv.inquiryId}
                             initialProduct={selectedConv.initialProduct ? {
                               productId: selectedConv.initialProduct.productId,
                               productName: selectedConv.initialProduct.productName,
