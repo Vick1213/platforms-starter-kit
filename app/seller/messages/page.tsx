@@ -233,37 +233,37 @@ export default function SellerMessagesPage() {
               {selectedConversation && selectedConv ? (
                 <>
                   {/* Chat Header */}
-                  <div className="p-4 border-b flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="p-4 border-b flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                         <span className="text-lg font-medium text-gray-600">
                           {selectedConv.buyerName?.charAt(0).toUpperCase() || 'C'}
                         </span>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate">
                           {selectedConv.buyerName || 'Customer'}
                         </h3>
                         {selectedConv.initialProduct && (
-                          <p className="text-xs text-gray-500 flex items-center gap-1">
-                            <Package className="w-3 h-3" />
-                            {selectedConv.initialProduct.productName}
+                          <p className="text-xs text-gray-500 flex items-center gap-1 min-w-0">
+                            <Package className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{selectedConv.initialProduct.productName}</span>
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap md:justify-end">
                       <Button 
                         onClick={() => setShowOfferForm(true)}
-                        className="bg-gradient-to-r from-orange-500 to-amber-500 text-white"
+                        className="bg-gradient-to-r from-orange-500 to-amber-500 text-white whitespace-nowrap shrink-0"
                         size="sm"
                       >
                         <DollarSign className="w-4 h-4 mr-1" />
                         Send Offer
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Archive className="w-4 h-4 mr-1" />
-                        Archive
+                      <Button variant="outline" size="sm" className="whitespace-nowrap">
+                        <Archive className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Archive</span>
                       </Button>
                       <Button variant="outline" size="icon" className="h-8 w-8">
                         <MoreVertical className="w-4 h-4" />
