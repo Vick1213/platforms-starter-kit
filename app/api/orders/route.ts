@@ -3,12 +3,109 @@ import { cookies } from 'next/headers';
 import { createOrder, getOrder, getOrderByNumber, getSellerOrders, getCustomerOrders, clearCart } from '@/lib/cart-db';
 import { getCart } from '@/lib/cart-db';
 import { prisma } from '@/lib/prisma';
-import { Order, OrderItem } from '@/lib/cart-types';
+import { Order as CartOrder, OrderItem as CartOrderItem } from '@/lib/cart-types';
 
 // Helper to get session ID
 async function getSessionId(): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get('cart_session')?.value || null;
+}
+
+function toAddress(value: unknown): CartOrder['shippingAddress'] {
+  const address = (value && typeof value === 'object') ? (value as Record<string, unknown>) : {};
+  return {
+    fullName: String(address.fullName ?? address.name ?? ''),
+    email: String(address.email ?? ''),
+    phone: String(address.phone ?? ''),
+    company: address.company ? String(address.company) : undefined,
+    addressLine1: String(address.addressLine1 ?? address.address1 ?? ''),
+    addressLine2: address.addressLine2 || address.address2 ? String(address.addressLine2 ?? address.address2) : undefined,
+    city: String(address.city ?? ''),
+    state: String(address.state ?? ''),
+    postalCode: String(address.postalCode ?? ''),
+    country: String(address.country ?? ''),
+  };
+}
+
+function normalizePrismaOrder(
+  order: {
+    id: string;
+    orderNumber: string;
+    sellerId: string;
+    customerId: string | null;
+    customerEmail: string;
+    items: {
+      id: string;
+      productId: string;
+      productSlug: string;
+      productName: string;
+      productImage: string | null;
+      quantity: number;
+      unitPrice: number;
+      unit: string | null;
+      subtotal: number;
+    }[];
+    subtotal: number;
+    shippingCost: number;
+    tax: number;
+    discount: number;
+    total: number;
+    shippingAddress: unknown;
+    billingAddress: unknown;
+    paymentMethod: string;
+    paymentStatus: string;
+    status: string;
+    customerNotes: string | null;
+    sellerNotes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    shippedAt: Date | null;
+    deliveredAt: Date | null;
+    seller: {
+      businessName: string;
+      subdomain: string;
+    };
+  }
+): CartOrder {
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    sellerId: order.sellerId,
+    sellerName: order.seller.businessName,
+    sellerSubdomain: order.seller.subdomain,
+    customerId: order.customerId || undefined,
+    customerEmail: order.customerEmail,
+    items: order.items.map((item): CartOrderItem => ({
+      id: item.id,
+      productId: item.productId,
+      productSlug: item.productSlug,
+      name: item.productName,
+      price: item.unitPrice,
+      quantity: item.quantity,
+      unit: item.unit || undefined,
+      image: item.productImage || undefined,
+      subtotal: item.subtotal,
+    })),
+    subtotal: order.subtotal,
+    shippingCost: order.shippingCost,
+    tax: order.tax,
+    discount: order.discount,
+    total: order.total,
+    shippingAddress: toAddress(order.shippingAddress),
+    billingAddress: {
+      ...toAddress(order.billingAddress || order.shippingAddress),
+      sameAsShipping: !order.billingAddress,
+    },
+    paymentMethod: order.paymentMethod as CartOrder['paymentMethod'],
+    paymentStatus: order.paymentStatus.toLowerCase() as CartOrder['paymentStatus'],
+    status: order.status.toLowerCase() as CartOrder['status'],
+    notes: order.customerNotes || undefined,
+    sellerNotes: order.sellerNotes || undefined,
+    createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
+    shippedAt: order.shippedAt?.toISOString(),
+    deliveredAt: order.deliveredAt?.toISOString(),
+  };
 }
 
 // POST /api/orders - Create new order
@@ -55,7 +152,7 @@ export async function POST(request: NextRequest) {
     const total = subtotal + tax + shippingCost;
 
     // Create order items
-    const orderItems: OrderItem[] = cart.items.map((item, index) => ({
+    const orderItems: CartOrderItem[] = cart.items.map((item, index) => ({
       id: `item-${index + 1}`,
       productId: item.productId,
       productSlug: item.productSlug,
@@ -108,11 +205,24 @@ export async function GET(request: NextRequest) {
 
     // Get specific order by ID
     if (orderId) {
-      const order = await getOrder(orderId);
-      if (!order) {
+      const redisOrder = await getOrder(orderId);
+      if (redisOrder) {
+        return NextResponse.json(redisOrder);
+      }
+
+      const prismaOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          seller: { select: { businessName: true, subdomain: true } },
+          items: true,
+        },
+      });
+
+      if (!prismaOrder) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
-      return NextResponse.json(order);
+
+      return NextResponse.json(normalizePrismaOrder(prismaOrder));
     }
 
     // Get order by order number
@@ -125,17 +235,53 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Store not found' }, { status: 404 });
       }
 
-      const order = await getOrderByNumber(orderNumber, seller.id);
-      if (!order) {
+      const redisOrder = await getOrderByNumber(orderNumber, seller.id);
+      if (redisOrder) {
+        return NextResponse.json(redisOrder);
+      }
+
+      const prismaOrder = await prisma.order.findFirst({
+        where: {
+          sellerId: seller.id,
+          orderNumber,
+        },
+        include: {
+          seller: { select: { businessName: true, subdomain: true } },
+          items: true,
+        },
+      });
+
+      if (!prismaOrder) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
-      return NextResponse.json(order);
+
+      return NextResponse.json(normalizePrismaOrder(prismaOrder));
     }
 
     // Get orders by customer email
     if (email) {
-      const orders = await getCustomerOrders(email, limit);
-      return NextResponse.json({ orders });
+      const [redisOrders, prismaOrders] = await Promise.all([
+        getCustomerOrders(email, limit),
+        prisma.order.findMany({
+          where: { customerEmail: email },
+          include: {
+            seller: { select: { businessName: true, subdomain: true } },
+            items: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+        }),
+      ]);
+
+      const mergedOrders = [
+        ...redisOrders,
+        ...prismaOrders.map(normalizePrismaOrder),
+      ]
+        .filter((order, index, list) => list.findIndex((o) => o.id === order.id) === index)
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+        .slice(0, limit);
+
+      return NextResponse.json({ orders: mergedOrders });
     }
 
     // Get seller orders
@@ -148,8 +294,28 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Store not found' }, { status: 404 });
       }
 
-      const orders = await getSellerOrders(seller.id, limit);
-      return NextResponse.json({ orders });
+      const [redisOrders, prismaOrders] = await Promise.all([
+        getSellerOrders(seller.id, limit),
+        prisma.order.findMany({
+          where: { sellerId: seller.id },
+          include: {
+            seller: { select: { businessName: true, subdomain: true } },
+            items: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+        }),
+      ]);
+
+      const mergedOrders = [
+        ...redisOrders,
+        ...prismaOrders.map(normalizePrismaOrder),
+      ]
+        .filter((order, index, list) => list.findIndex((o) => o.id === order.id) === index)
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+        .slice(0, limit);
+
+      return NextResponse.json({ orders: mergedOrders });
     }
 
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });

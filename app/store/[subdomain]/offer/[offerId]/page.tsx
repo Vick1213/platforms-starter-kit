@@ -127,12 +127,12 @@ export default function AcceptOfferPage() {
         throw new Error(data.error || 'Failed to accept offer');
       }
 
-      const { order, invoice } = await res.json();
+      const { order } = await res.json();
       setStep('success');
       
       // Redirect to order confirmation after a short delay
       setTimeout(() => {
-        router.push(`/order-confirmation?orderId=${order.id}`);
+        router.push(`/order-confirmation?order=${order.orderNumber}`);
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept offer');

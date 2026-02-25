@@ -1,11 +1,39 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getSellerByUserId, updateSeller } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { redis } from '@/lib/redis';
 
 // GET /api/seller/profile - Get seller profile and customization
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const subdomain = searchParams.get('subdomain');
+
+    // Public store lookup by subdomain (for storefront pages)
+    if (subdomain) {
+      const seller = await prisma.seller.findUnique({
+        where: { subdomain },
+        select: {
+          id: true,
+          businessName: true,
+          subdomain: true,
+          logo: true,
+        },
+      });
+
+      if (!seller) {
+        return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        id: seller.id,
+        name: seller.businessName,
+        subdomain: seller.subdomain,
+        logo: seller.logo,
+      });
+    }
+
     const session = await auth();
     
     if (!session?.user?.id) {

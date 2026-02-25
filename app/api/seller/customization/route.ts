@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getSellerByUserId } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { redis } from '@/lib/redis';
 import { 
   StoreCustomization, 
@@ -9,8 +10,26 @@ import {
 } from '@/lib/store-customization-types';
 
 // GET /api/seller/customization - Get store customization
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const subdomain = searchParams.get('subdomain');
+
+    // Public store customization lookup by subdomain (for storefront pages)
+    if (subdomain) {
+      const seller = await prisma.seller.findUnique({
+        where: { subdomain },
+        select: { id: true },
+      });
+
+      if (!seller) {
+        return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
+      }
+
+      const customization = await redis.get<StoreCustomization>(`store:custom:${seller.id}`);
+      return NextResponse.json(mergeWithDefaults(customization || defaultStoreCustomization));
+    }
+
     const session = await auth();
     
     if (!session?.user?.id) {

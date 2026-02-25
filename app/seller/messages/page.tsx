@@ -44,7 +44,7 @@ export default function SellerMessagesPage() {
       const res = await fetch('/api/seller/profile');
       if (res.ok) {
         const data = await res.json();
-        setSellerId(data.id);
+        setSellerId(data.id || data.seller?.id || null);
       }
     } catch (error) {
       console.error('Error fetching seller info:', error);
